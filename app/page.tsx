@@ -11,17 +11,15 @@ const App: React.FC = () => {
 	const handleSignUp = async () => {
 		try {
 			const userCredential = await signInWithPopup(auth, googleProvider);
-			// Signed up successfully!
 			const user = userCredential.user;
 			console.log('User signed up:', user.email);
 			console.log(user);
 			router.push('/dashboard');
-			// You can now redirect the user or update your app state
-		} catch (error) {
-			const errorCode = error.code;
-			const errorMessage = error.message;
-			console.error('Error signing up:', errorCode, errorMessage);
-			// Handle specific errors (e.g., email already in use)
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				const errorMessage = error.message;
+				console.error('Error signing up:', errorMessage);
+			}
 		}
 	};
 
