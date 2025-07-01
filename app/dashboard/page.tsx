@@ -1,25 +1,25 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // For App Router navigation
-import { AuthProvider, useAuth } from '../config/AuthContext';
+import { useRouter } from 'next/navigation';
 import TierListCreator from '../components/TierListCreator';
+import { useFirebase } from '../components/FirebaseProvider';
 
 const DashboardPage: React.FC = () => {
-	const { user, loading, signOut } = useAuth();
+	const { isLoading, user, signOut } = useFirebase();
 	const router = useRouter();
 
-	// Protect the route: Redirect if not authenticated or still loading
 	useEffect(() => {
-		if (!loading && !user) {
-			router.push('/'); // Redirect to your login page
+		// Protect the route: Redirect if not authenticated or still loading
+		if (isLoading == false && !user) {
+			router.push('/');
 		}
-	}, [user, loading, router]); // Depend on user, loading, and router
+	}, [user, isLoading, router]);
 
-	if (loading) {
+	if (isLoading) {
 		return (
 			<div className='flex items-center justify-center min-h-screen'>
-				<p>Loading dashboard...</p> {/* Or a spinner */}
+				<p>Loading dashboard...</p>
 			</div>
 		);
 	}
@@ -29,24 +29,30 @@ const DashboardPage: React.FC = () => {
 	}
 
 	return (
-		<AuthProvider>
-			<div className='min-h-screen'>
-				<div className='bg-gray-100 flex flex-row justify-between p-4'>
-					<h1 className='text-4xl font-bold text-gray-800'>{user.displayName || user.email}</h1>
-					<div className='flex space-x-4'>
-						<button
-							onClick={signOut}
-							className='px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out'
-						>
-							Sign Out
-						</button>
-					</div>
+		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200'>
+			<div className='mb-2 flex flex-row justify-between p-4'>
+				<div className='flex space-x-4'>
+					<button
+						onClick={signOut}
+						className='px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out'
+					>
+						Back
+					</button>
 				</div>
-				<div>
-					<TierListCreator />
+				<h1 className='text-4xl font-bold text-gray-800'>{user.displayName || user.email}</h1>
+				<div className='flex space-x-4'>
+					<button
+						onClick={signOut}
+						className='px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out'
+					>
+						Sign Out
+					</button>
 				</div>
 			</div>
-		</AuthProvider>
+			<div>
+				<TierListCreator />
+			</div>
+		</div>
 	);
 };
 

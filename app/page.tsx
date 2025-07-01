@@ -1,43 +1,31 @@
 'use client';
-import React from 'react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from './config/firebase_config';
+import { Button } from './components/Button';
+import { useFirebase } from './components/FirebaseProvider'; // Adjust path if necessary
 
-const App: React.FC = () => {
+const SignInPage: React.FC = () => {
 	const router = useRouter();
-	const googleProvider = new GoogleAuthProvider();
+	const { user, signIn } = useFirebase();
 
-	const handleSignUp = async () => {
-		try {
-			const userCredential = await signInWithPopup(auth, googleProvider);
-			const user = userCredential.user;
-			console.log('User signed up:', user.email);
-			console.log(user);
-			router.push('/dashboard');
-		} catch (error: unknown) {
-			if (error instanceof Error) {
-				const errorMessage = error.message;
-				console.error('Error signing up:', errorMessage);
-			}
+	// Redirect if already signed in
+	useEffect(() => {
+		if (user) {
+			router.push('/dashboard'); // Or wherever your main app dashboard is
 		}
-	};
+	}, [user, router]);
 
 	return (
-		<div className='min-h-screen bg-gradient-to-br from-purple-100 to-blue-200 p-6 font-inter text-gray-800'>
+		<div className='min-h-screen space-y-4 flex flex-col justify-center text-center bg-gradient-to-b from-orange-100 to-blue-200'>
+			<h1 className='text-8xl'>Tier Lists</h1>
 			<div>
-				<h1 className='text-4xl font-bold text-purple-700'>Tier List App</h1>
-			</div>
-			<div>
-				<button
-					className='bg-blue-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-blue-700 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75'
-					onClick={handleSignUp}
-				>
-					Sign Up
-				</button>
+				<Button variant='primary' onClick={signIn}>
+					Sign In
+				</Button>
 			</div>
 		</div>
 	);
 };
 
-export default App;
+export default SignInPage;
