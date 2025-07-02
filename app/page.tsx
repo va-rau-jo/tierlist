@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from './components/Button';
-import { useFirebase } from './components/FirebaseProvider'; // Adjust path if necessary
+import { useFirebase } from './firebase/FirebaseProvider';
 
 const SignInPage: React.FC = () => {
 	const router = useRouter();

@@ -1,8 +1,12 @@
 import { SetStateAction, useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from './Button';
 import { Input } from './Input';
-import { useFirebase } from './FirebaseProvider';
+import { useFirebase } from '../firebase/FirebaseProvider';
+import { TierListItem } from '../model/TierListItem';
+import { addTierList, updateUserTierList, updateTierList } from '../firebase/firebase_utils';
+import { TierList, TierListRanking } from '../model/TierList';
+import { serverTimestamp } from 'firebase/firestore';
+import { Tier } from '../model/Tier';
 
 interface TierListCreatorProps {}
 
@@ -10,44 +14,42 @@ const generateUniqueId = () => {
 	return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 };
 
-class TierListItem {
-	id: string;
-	type: 'text' | 'image';
-	value: string;
-
-	constructor(id: string, type: 'text' | 'image' = 'text', value: string = '') {
-		this.id = id;
-		this.type = type;
-		this.value = value;
-	}
-}
-
 const createNewTierListItem = () => {
 	return new TierListItem(generateUniqueId(), 'text', '');
 };
 
+const createNewTier = (name: string, color: string) => {
+	return new Tier(generateUniqueId(), name, color);
+};
+
 export default function TierListCreator({}: TierListCreatorProps) {
+	// Name and description of the tier list
 	const [listName, setListName] = useState('');
 	const [listDescription, setListDescription] = useState('');
 	// The current item we are trying to add
 	const [currentAddItem, setCurrentAddItem] = useState(createNewTierListItem());
-
+	// Items and tiers (tiers are started as defaults, items starts empty).
 	const [items, setItems] = useState([]);
 	const [tiers, setTiers] = useState([
-		{ id: 's', name: 'S', color: '#FF7F7F' }, // Red
-		{ id: 'a', name: 'A', color: '#FFBF7F' }, // Orange
-		{ id: 'b', name: 'B', color: '#FFFF7F' }, // Yellow
-		{ id: 'c', name: 'C', color: '#BFFF7F' }, // Light Green
-		{ id: 'd', name: 'D', color: '#7FFFFF' }, // Light Blue
-		{ id: 'f', name: 'F', color: '#BFBFFF' }, // Purple
+		createNewTier('S', '#FF7F7F'),
+		createNewTier('A', '#FFBF7F'),
+		createNewTier('B', '#FFFF7F'),
+		createNewTier('C', '#BFFF7F'),
+		createNewTier('D', '#7FFFFF'),
+		createNewTier('F', '#FF7FFF'),
 	]);
+	// Message that displays at the top of the page.
 	const [message, setMessage] = useState('');
+	// Replaces save button if we are saving.
 	const [isSaving, setIsSaving] = useState(false);
+	// Id of the created tier list (so we don't re-create instead of overwriting).
+	const [listId, setListId] = useState('');
+	const { db, user } = useFirebase();
 
-	const { db, user, firebaseConfig } = useFirebase();
-	if (!user) {
+	if (!user || !db) {
 		return null;
 	}
+
 	const userId = user.uid;
 
 	// Add a new item input field
@@ -87,7 +89,7 @@ export default function TierListCreator({}: TierListCreatorProps) {
 	};
 
 	// Save the tier list to Firestore
-	const handleSaveTierList = async () => {
+	const saveTierListOnClick = async () => {
 		if (!listName.trim()) {
 			setMessage('Please fill in the list name.');
 			return;
@@ -105,43 +107,33 @@ export default function TierListCreator({}: TierListCreatorProps) {
 		setMessage('');
 
 		try {
-			const appId = firebaseConfig.appId;
-			const tierListRef = collection(db, `tier_list`);
-
-			const newTierList = {
-				creatorId: userId,
-				name: listName,
-				description: listDescription,
-				items: items.map((item: TierListItem) => ({
-					id: item.id,
-					type: item.type,
-					value: item.value.trim(),
-				})),
-				tiers: tiers.map((tier) => ({
-					id: tier.id,
-					name: tier.name.trim(),
-					color: tier.color,
-				})),
-				createdAt: serverTimestamp(),
-			};
-
-			await addDoc(tierListRef, newTierList);
-			setMessage('Tier list saved successfully!');
-			setListName('');
-			setListDescription('');
-			setItems([createNewTierListItem()]);
-			setTiers([
-				{ id: 's', name: 'S-Tier', color: '#FF7F7F' },
-				{ id: 'a', name: 'A-Tier', color: '#FFBF7F' },
-				{ id: 'b', name: 'B-Tier', color: '#FFFF7F' },
-				{ id: 'c', name: 'C-Tier', color: '#BFFF7F' },
-				{ id: 'd', name: 'D-Tier', color: '#7FFFFF' },
-				{ id: 'f', name: 'F-Tier', color: '#BFBFFF' },
-			]);
+			const newTierList = new TierList(
+				userId,
+				serverTimestamp(),
+				serverTimestamp(),
+				listName,
+				listDescription,
+				tiers,
+				items,
+				new Map<string, TierListRanking>()
+			);
+			if (listId) {
+				// We already created a tier list, update the updateable fields.
+				await updateTierList(listId, newTierList, db);
+				setMessage('Tier list updated successfully!');
+				setIsSaving(false);
+				return;
+			} else {
+				// Create a new tier list
+				const addedTierListId = await addTierList(newTierList, db);
+				await updateUserTierList(addedTierListId, userId, db);
+				setMessage('Tier list saved successfully!');
+				setIsSaving(false);
+				setListId(addedTierListId);
+			}
 		} catch (error) {
 			console.error('Error saving tier list:', error);
 			setMessage(`Error saving tier list: ${error.message}`);
-		} finally {
 			setIsSaving(false);
 		}
 	};
@@ -200,6 +192,17 @@ export default function TierListCreator({}: TierListCreatorProps) {
 					{message}
 				</div>
 			)}
+			{listId ? (
+				<Input
+					label='Tier List Id'
+					id='listId'
+					value={listId}
+					onChange={null}
+					placeholder=''
+					disabled={true}
+					className='mb-2'
+				/>
+			) : null}
 			<Input
 				label='Tier List Name'
 				id='listName'
@@ -284,7 +287,7 @@ export default function TierListCreator({}: TierListCreatorProps) {
 				Add Tier
 			</Button>
 			<div className='flex flex-col sm:flex-row justify-center gap-4 mt-8'>
-				<Button onClick={handleSaveTierList} disabled={isSaving}>
+				<Button onClick={saveTierListOnClick} disabled={isSaving}>
 					{isSaving ? 'Saving...' : 'Save Tier List'}
 				</Button>
 			</div>

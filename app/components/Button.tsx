@@ -1,6 +1,6 @@
 export const Button = ({ children, onClick, variant = 'primary', className = '', ...props }) => {
 	const baseStyle =
-		'px-6 py-3 rounded-full font-semibold transition duration-300 ease-in-out transform hover:scale-105 shadow-md';
+		'px-6 py-3 rounded-full font-semibold transition duration-300 ease-in-out transform hover:scale-105 shadow-md cursor-pointer';
 	const variants = {
 		primary: 'bg-indigo-600 text-white hover:bg-indigo-700',
 		secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300',

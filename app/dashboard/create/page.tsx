@@ -2,8 +2,9 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '../firebase/FirebaseProvider';
-import { Button } from '../components/Button';
+import TierListCreator from '../../components/TierListCreator';
+import { useFirebase } from '../../firebase/FirebaseProvider';
+import { Button } from '../../components/Button';
 
 const DashboardPage: React.FC = () => {
 	const { isLoading, user, signOut } = useFirebase();
@@ -16,7 +17,7 @@ const DashboardPage: React.FC = () => {
 		}
 	}, [user, isLoading, router]);
 
-	if (isLoading || !user) {
+	if (isLoading) {
 		return (
 			<div className='flex items-center justify-center min-h-screen'>
 				<p>Loading dashboard...</p>
@@ -24,8 +25,12 @@ const DashboardPage: React.FC = () => {
 		);
 	}
 
+	if (!user) {
+		return null;
+	}
+
 	return (
-		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200 flex flex-col'>
+		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200'>
 			<div className='mb-2 flex flex-row justify-between p-4'>
 				<div className='flex space-x-4'>
 					<Button
@@ -44,20 +49,8 @@ const DashboardPage: React.FC = () => {
 					</Button>
 				</div>
 			</div>
-			<div className=' flex justify-center items-center flex-1 flex-col'>
-				<div className='flex h-fit space-x-2'>
-					<Button variant='outline' onClick={() => router.push('/dashboard/create')}>
-						Create New Tierlist
-					</Button>
-					<Button variant='outline' onClick={() => router.push('/dashboard/join')}>
-						Join Tierlist
-					</Button>
-				</div>
-				<div className='flex flex-1'>
-					<div>
-						<h1> Your Tierlists</h1>
-					</div>
-				</div>
+			<div>
+				<TierListCreator />
 			</div>
 		</div>
 	);

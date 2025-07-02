@@ -1,3 +1,5 @@
+const disabledClass = 'bg-gray-200 text-gray-500';
+
 export const Input = ({
 	label,
 	id,
@@ -6,6 +8,7 @@ export const Input = ({
 	onChange,
 	placeholder,
 	className = '',
+	disabled = false,
 	...props
 }) => (
 	<div>
@@ -20,7 +23,10 @@ export const Input = ({
 			value={value}
 			onChange={onChange}
 			placeholder={placeholder}
-			className={`mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${className}`}
+			disabled={disabled}
+			className={`mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${className} ${
+				disabled ? disabledClass : ''
+			}`}
 			{...props}
 		/>
 	</div>

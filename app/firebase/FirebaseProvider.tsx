@@ -1,4 +1,3 @@
-// src/firebase/FirebaseProvider.tsx
 'use client'; // This directive is crucial for client-side hooks in Next.js App Router
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -7,6 +6,7 @@ import { onAuthStateChanged, getAuth, User, signOut as firebaseSignOut } from 'f
 import { getFirestore } from 'firebase/firestore';
 import { app, auth, db, firebaseConfig } from '../config/firebase_config';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { addUser } from './firebase_utils';
 
 interface FirebaseContextType {
 	auth: ReturnType<typeof getAuth> | null;
@@ -49,6 +49,11 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 		try {
 			const userCredential = await signInWithPopup(auth, googleProvider);
 			const user = userCredential.user;
+
+			console.log(db);
+			if (db) {
+				await addUser(user.uid, user.displayName ?? 'Guest User', db);
+			}
 			setUser(user);
 			console.log('User signed up:', user.email);
 			console.log(user);
