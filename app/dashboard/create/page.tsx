@@ -6,7 +6,7 @@ import TierListCreator from '../../components/TierListCreator';
 import { useFirebase } from '../../firebase/FirebaseProvider';
 import { Button } from '../../components/Button';
 
-const DashboardPage: React.FC = () => {
+const CreatePage: React.FC = () => {
 	const { isLoading, user, signOut } = useFirebase();
 	const router = useRouter();
 
@@ -56,4 +56,4 @@ const DashboardPage: React.FC = () => {
 	);
 };
 
-export default DashboardPage;
+export default CreatePage;

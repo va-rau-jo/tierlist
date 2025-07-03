@@ -107,8 +107,9 @@ export default function TierListCreator({}: TierListCreatorProps) {
 		setMessage('');
 
 		try {
-			const newTierList = new TierList(
+			let newTierList = new TierList(
 				userId,
+				user.displayName || '',
 				serverTimestamp(),
 				serverTimestamp(),
 				listName,
@@ -125,11 +126,12 @@ export default function TierListCreator({}: TierListCreatorProps) {
 				return;
 			} else {
 				// Create a new tier list
-				const addedTierListId = await addTierList(newTierList, db);
-				await updateUserTierList(addedTierListId, userId, db);
+				newTierList = await addTierList(newTierList, db);
+				const newTierListId = newTierList.id;
+				await updateUserTierList(newTierListId, userId, db);
 				setMessage('Tier list saved successfully!');
 				setIsSaving(false);
-				setListId(addedTierListId);
+				setListId(newTierListId);
 			}
 		} catch (error) {
 			console.error('Error saving tier list:', error);
