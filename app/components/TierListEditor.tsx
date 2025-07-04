@@ -1,14 +1,29 @@
-import { SetStateAction, useState } from 'react';
+import { SetStateAction, useEffect, useState } from 'react';
 import { Button } from './Button';
 import { Input } from './Input';
 import { useFirebase } from '../firebase/FirebaseProvider';
 import { TierListItem } from '../model/TierListItem';
-import { addTierList, updateUserTierList, updateTierList } from '../firebase/firebase_utils';
+import {
+	addTierList,
+	getTierList,
+	updateUserTierList,
+	updateTierList,
+} from '../firebase/firebase_utils';
 import { TierList, TierListRanking } from '../model/TierList';
-import { serverTimestamp } from 'firebase/firestore';
+import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Tier } from '../model/Tier';
 
-interface TierListCreatorProps {}
+enum TierListEditorMode {
+	Create,
+	Edit,
+}
+
+interface TierListEditorProps {
+	// Whether we are creating or editing an existing tier list
+	mode: TierListEditorMode;
+	// The tier list id (only if we are editing an existing tier list)
+	tierListId?: string;
+}
 
 const generateUniqueId = () => {
 	return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
@@ -22,14 +37,15 @@ const createNewTier = (name: string, color: string) => {
 	return new Tier(generateUniqueId(), name, color);
 };
 
-export default function TierListCreator({}: TierListCreatorProps) {
+const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => {
+	const { db, user } = useFirebase();
 	// Name and description of the tier list
 	const [listName, setListName] = useState('');
 	const [listDescription, setListDescription] = useState('');
 	// The current item we are trying to add
 	const [currentAddItem, setCurrentAddItem] = useState(createNewTierListItem());
 	// Items and tiers (tiers are started as defaults, items starts empty).
-	const [items, setItems] = useState([]);
+	const [items, setItems] = useState<TierListItem[]>([]);
 	const [tiers, setTiers] = useState([
 		createNewTier('S', '#FF7F7F'),
 		createNewTier('A', '#FFBF7F'),
@@ -43,14 +59,38 @@ export default function TierListCreator({}: TierListCreatorProps) {
 	// Replaces save button if we are saving.
 	const [isSaving, setIsSaving] = useState(false);
 	// Id of the created tier list (so we don't re-create instead of overwriting).
-	const [listId, setListId] = useState('');
-	const { db, user } = useFirebase();
+	const [listId, setListId] = useState(tierListId);
+	const [isLoadingTierList, setIsLoadingTierList] = useState(true);
+	const [creatorId, setCreatorId] = useState(user?.uid);
+
+	useEffect(() => {
+		const fetchTierList = async () => {
+			if (mode == TierListEditorMode.Create) {
+				setIsLoadingTierList(false);
+			}
+			if (mode === TierListEditorMode.Edit && listId && db) {
+				const tierListDoc = await getTierList(listId, db);
+				if (tierListDoc) {
+					setListName(tierListDoc.name);
+					setListDescription(tierListDoc.description);
+					setItems(tierListDoc.items);
+					setTiers(tierListDoc.tiers);
+					setIsLoadingTierList(false);
+					setCreatorId(tierListDoc.creatorId);
+				}
+			}
+		};
+
+		fetchTierList();
+	}, [mode, listId, db]);
 
 	if (!user || !db) {
 		return null;
 	}
 
-	const userId = user.uid;
+	if (isLoadingTierList) {
+		return <div>Loading...</div>;
+	}
 
 	// Add a new item input field
 	const handleAddItem = () => {
@@ -108,10 +148,11 @@ export default function TierListCreator({}: TierListCreatorProps) {
 
 		try {
 			let newTierList = new TierList(
-				userId,
+				user.uid,
 				user.displayName || '',
-				serverTimestamp(),
-				serverTimestamp(),
+				[],
+				serverTimestamp() as Timestamp,
+				serverTimestamp() as Timestamp,
 				listName,
 				listDescription,
 				tiers,
@@ -128,14 +169,16 @@ export default function TierListCreator({}: TierListCreatorProps) {
 				// Create a new tier list
 				newTierList = await addTierList(newTierList, db);
 				const newTierListId = newTierList.id;
-				await updateUserTierList(newTierListId, userId, db);
+				await updateUserTierList(newTierListId, user.uid, db);
 				setMessage('Tier list saved successfully!');
 				setIsSaving(false);
 				setListId(newTierListId);
 			}
-		} catch (error) {
+		} catch (error: unknown) {
 			console.error('Error saving tier list:', error);
-			setMessage(`Error saving tier list: ${error.message}`);
+			if (error instanceof Error) {
+				setMessage(`Error saving tier list: ${error.message}`);
+			}
 			setIsSaving(false);
 		}
 	};
@@ -182,9 +225,12 @@ export default function TierListCreator({}: TierListCreatorProps) {
 		</div>
 	);
 
+	const isCreator = creatorId === user.uid;
+	const title = mode === TierListEditorMode.Create ? 'Create New Tier List' : 'Edit Tier List';
+
 	return (
 		<div className='bg-white p-8 rounded-lg shadow-xl max-w-4xl mx-auto'>
-			<h2 className='text-3xl font-bold mb-6 text-center'>Create New Tier List</h2>
+			<h2 className='text-3xl font-bold mb-6 text-center'>{title}</h2>
 			{message && (
 				<div
 					className={`p-3 mb-4 rounded-md text-center ${
@@ -211,6 +257,7 @@ export default function TierListCreator({}: TierListCreatorProps) {
 				value={listName}
 				onChange={(e: { target: { value: SetStateAction<string> } }) => setListName(e.target.value)}
 				placeholder='e.g., Favorite Video Games'
+				disabled={!isCreator}
 				className='mb-2'
 			/>
 			<Input
@@ -221,6 +268,7 @@ export default function TierListCreator({}: TierListCreatorProps) {
 					setListDescription(e.target.value)
 				}
 				placeholder='A brief description of your tier list.'
+				disabled={!isCreator}
 				className='mb-2'
 			/>
 			{addItemDiv}
@@ -235,7 +283,7 @@ export default function TierListCreator({}: TierListCreatorProps) {
 					<div className='pt-2 pl-2 pr-2 flex flex-wrap space-x-2'>
 						{items.map((item: TierListItem, index) => (
 							<div
-								key={item.id}
+								key={index}
 								className='w-15 mb-2 aspect-square flex items-center justify-center bg-white'
 							>
 								<span> {item.value}</span>
@@ -295,4 +343,6 @@ export default function TierListCreator({}: TierListCreatorProps) {
 			</div>
 		</div>
 	);
-}
+};
+
+export { TierListEditor, TierListEditorMode };

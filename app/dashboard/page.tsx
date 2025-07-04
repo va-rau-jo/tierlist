@@ -7,9 +7,11 @@ import { Button } from '../components/Button';
 import { getUserTierLists } from '../firebase/firebase_utils';
 import { TierList } from '../model/TierList';
 import TierListItemCard from '../components/TierListItemCard';
+import NavBar from '../components/NavBar';
+import Link from 'next/link';
 
 const DashboardPage: React.FC = () => {
-	const { db, isLoading, user, signOut } = useFirebase();
+	const { db, isLoading, user } = useFirebase();
 	const router = useRouter();
 	const [userTierLists, setUserTierLists] = React.useState<TierList[]>([]);
 	const [isLoadingTierLists, setIsLoadingTierLists] = React.useState(true);
@@ -48,37 +50,20 @@ const DashboardPage: React.FC = () => {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200 flex flex-col'>
-			<div className='mb-2 flex flex-row justify-between p-4'>
-				<div className='flex space-x-4'>
-					<Button
-						variant='danger'
-						onClick={() => {
-							router.push('/dashboard');
-						}}
-					>
-						Back
-					</Button>
-				</div>
-				<h1 className='text-4xl font-bold text-gray-800'>{user.displayName || user.email}</h1>
-				<div className='flex space-x-4'>
-					<Button variant='danger' onClick={signOut}>
-						Sign Out
-					</Button>
-				</div>
-			</div>
+			<NavBar />
 			<div className=' flex justify-center items-center flex-1 flex-col'>
 				<div className='flex h-fit space-x-2'>
-					<Button variant='outline' onClick={() => router.push('/dashboard/create')}>
-						Create New Tierlist
-					</Button>
-					<Button variant='outline' onClick={() => router.push('/dashboard/join')}>
-						Join Tierlist
-					</Button>
+					<Link href={'/dashboard/create'}>
+						<Button variant='outline'>Create New Tierlist</Button>
+					</Link>
+					<Link href={'/dashboard/join'}>
+						<Button variant='outline'>Join Tierlist</Button>
+					</Link>
 				</div>
-				<div className='flex flex-1'>
-					<div>
+				<div className='flex flex-1 justify-center w-full'>
+					<div className='flex flex-col w-full mx-16 mt-16 items-center'>
 						<h1> Your Tierlists</h1>
-						<div>
+						<div className='flex'>
 							{userTierLists.length == 0 ? (
 								<p className='text-gray-500 italic mt-4'>
 									No tierlists found. Create one to get started!

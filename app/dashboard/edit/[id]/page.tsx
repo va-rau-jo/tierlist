@@ -2,20 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import TierListCreator from '../../../components/TierListCreator';
-import { useFirebase } from '../../../firebase/FirebaseProvider';
-import { Button } from '../../../components/Button';
-import { getTierList } from '../../../firebase/firebase_utils';
+import { TierListEditor, TierListEditorMode } from '@/app/components/TierListEditor';
+import { useFirebase } from '@/app/firebase/FirebaseProvider';
+import { getTierList } from '@/app/firebase/firebase_utils';
 import { TierList } from '@/app/model/TierList';
+import NavBar from '@/app/components/NavBar';
 
 const EditPage: React.FC = () => {
-	const { db, isLoading, user, signOut } = useFirebase();
+	const { db, isLoading, user } = useFirebase();
 	const router = useRouter();
 	const [tierList, setTierList] = useState<TierList>();
 	const [isLoadingTierList, setIsLoadingTierList] = useState<boolean>(true);
-	const tierListId = useParams().id;
-
-	console.log(tierListId);
+	const tierListId = useParams().id?.toString();
 
 	useEffect(() => {
 		// Protect the route: Redirect if not authenticated or still loading
@@ -54,26 +52,9 @@ const EditPage: React.FC = () => {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200'>
-			<div className='mb-2 flex flex-row justify-between p-4'>
-				<div className='flex space-x-4'>
-					<Button
-						variant='danger'
-						onClick={() => {
-							router.push('/dashboard');
-						}}
-					>
-						Back
-					</Button>
-				</div>
-				<h1 className='text-4xl font-bold text-gray-800'>{user.displayName || user.email}</h1>
-				<div className='flex space-x-4'>
-					<Button variant='danger' onClick={signOut}>
-						Sign Out
-					</Button>
-				</div>
-			</div>
+			<NavBar />
 			<div>
-				<TierListCreator />
+				<TierListEditor mode={TierListEditorMode.Edit} tierListId={tierListId} />
 			</div>
 		</div>
 	);

@@ -2,12 +2,12 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import TierListCreator from '../../components/TierListCreator';
 import { useFirebase } from '../../firebase/FirebaseProvider';
-import { Button } from '../../components/Button';
+import { TierListEditor, TierListEditorMode } from '../../components/TierListEditor';
+import NavBar from '@/app/components/NavBar';
 
 const CreatePage: React.FC = () => {
-	const { isLoading, user, signOut } = useFirebase();
+	const { isLoading, user } = useFirebase();
 	const router = useRouter();
 
 	useEffect(() => {
@@ -31,26 +31,9 @@ const CreatePage: React.FC = () => {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200'>
-			<div className='mb-2 flex flex-row justify-between p-4'>
-				<div className='flex space-x-4'>
-					<Button
-						variant='danger'
-						onClick={() => {
-							router.push('/dashboard');
-						}}
-					>
-						Back
-					</Button>
-				</div>
-				<h1 className='text-4xl font-bold text-gray-800'>{user.displayName || user.email}</h1>
-				<div className='flex space-x-4'>
-					<Button variant='danger' onClick={signOut}>
-						Sign Out
-					</Button>
-				</div>
-			</div>
+			<NavBar />
 			<div>
-				<TierListCreator />
+				<TierListEditor mode={TierListEditorMode.Create} />
 			</div>
 		</div>
 	);
