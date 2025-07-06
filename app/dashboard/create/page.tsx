@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '../../firebase/FirebaseProvider';
 import { TierListEditor, TierListEditorMode } from '../../components/TierListEditor';
@@ -10,12 +10,10 @@ const CreatePage: React.FC = () => {
 	const { isLoading, user } = useFirebase();
 	const router = useRouter();
 
-	useEffect(() => {
-		// Protect the route: Redirect if not authenticated or still loading
-		if (isLoading == false && !user) {
-			router.push('/');
-		}
-	}, [user, isLoading, router]);
+	if (!user) {
+		router.push('/');
+		return;
+	}
 
 	if (isLoading) {
 		return (
@@ -23,10 +21,6 @@ const CreatePage: React.FC = () => {
 				<p>Loading dashboard...</p>
 			</div>
 		);
-	}
-
-	if (!user) {
-		return null;
 	}
 
 	return (

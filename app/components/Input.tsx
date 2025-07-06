@@ -1,5 +1,16 @@
 const disabledClass = 'bg-gray-200 text-gray-500';
 
+interface InputProps {
+	label?: string;
+	id: string;
+	type?: string;
+	value: string;
+	onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+	placeholder?: string;
+	className?: string;
+	disabled?: boolean;
+}
+
 export const Input = ({
 	label,
 	id,
@@ -10,7 +21,7 @@ export const Input = ({
 	className = '',
 	disabled = false,
 	...props
-}) => (
+}: InputProps) => (
 	<div>
 		{label && (
 			<label htmlFor={id} className='block text-sm font-medium text-gray-700 mb-1'>

@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '../firebase/FirebaseProvider';
 import { Button } from '../components/Button';
-import { getUserTierLists } from '../firebase/firebase_utils';
+import { getUserTierLists, shouldRedirectToLogin } from '../firebase/firebase_utils';
 import { TierList } from '../model/TierList';
 import TierListItemCard from '../components/TierListItemCard';
 import NavBar from '../components/NavBar';
@@ -17,11 +17,7 @@ const DashboardPage: React.FC = () => {
 	const [isLoadingTierLists, setIsLoadingTierLists] = React.useState(true);
 
 	useEffect(() => {
-		// Protect the route: Redirect if not authenticated or still loading
-		if (isLoading == false && !user) {
-			router.push('/');
-			return;
-		}
+		// User and DB are confirmed not null
 		if (isLoading || !user || !db) {
 			return;
 		}
@@ -33,6 +29,12 @@ const DashboardPage: React.FC = () => {
 		});
 	}, [db, user, isLoading, router]);
 
+	if (shouldRedirectToLogin(user, db, isLoading)) {
+		router.push('/');
+		return;
+	}
+
+	// User and DB are confirmed not null
 	if (isLoading || !user || !db || isLoadingTierLists) {
 		return (
 			<div className='flex items-center justify-center min-h-screen'>

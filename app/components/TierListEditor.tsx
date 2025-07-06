@@ -9,7 +9,7 @@ import {
 	updateUserTierList,
 	updateTierList,
 } from '../firebase/firebase_utils';
-import { TierList, TierListRanking } from '../model/TierList';
+import { TierList, TierListRankings } from '../model/TierList';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Tier } from '../model/Tier';
 
@@ -62,6 +62,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const [listId, setListId] = useState(tierListId);
 	const [isLoadingTierList, setIsLoadingTierList] = useState(true);
 	const [creatorId, setCreatorId] = useState(user?.uid);
+	const [editorIds, setEditorIds] = useState<string[]>([]);
 
 	useEffect(() => {
 		const fetchTierList = async () => {
@@ -75,8 +76,9 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					setListDescription(tierListDoc.description);
 					setItems(tierListDoc.items);
 					setTiers(tierListDoc.tiers);
-					setIsLoadingTierList(false);
 					setCreatorId(tierListDoc.creatorId);
+					setEditorIds(tierListDoc.editorIds);
+					setIsLoadingTierList(false);
 				}
 			}
 		};
@@ -142,6 +144,10 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			setMessage('Please ensure all tiers have a name.');
 			return;
 		}
+		if (items.length === 0) {
+			setMessage('Add at least one item.');
+			return;
+		}
 
 		setIsSaving(true);
 		setMessage('');
@@ -150,14 +156,14 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			let newTierList = new TierList(
 				user.uid,
 				user.displayName || '',
-				[],
+				editorIds,
 				serverTimestamp() as Timestamp,
 				serverTimestamp() as Timestamp,
 				listName,
 				listDescription,
 				tiers,
 				items,
-				new Map<string, TierListRanking>()
+				new Map<string, TierListRankings>()
 			);
 			if (listId) {
 				// We already created a tier list, update the updateable fields.
@@ -182,6 +188,42 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			setIsSaving(false);
 		}
 	};
+
+	const addEditorsDiv = (
+		<div className='flex flex-col bg-gray-50 rounded-lg border border-gray-200 mb-2'>
+			<h2 className='text-center text-xl'>Add Editors</h2>
+			<div className='flex flex-col space-y-2 p-4'>
+				{editorIds.map((user, index) => (
+					<div key={index} className='flex items-center gap-2'>
+						<Input
+							label=''
+							id={`user-${index}`}
+							value={user}
+							onChange={(e) => {
+								const newEditorIds = [...editorIds];
+								newEditorIds[index] = e.target.value;
+								setEditorIds(newEditorIds);
+							}}
+							placeholder="Enter the user's ID"
+							className='flex-grow'
+						/>
+						<i
+							className='fas fa-trash trashcan-icon cursor-pointer'
+							onClick={() => {
+								const newEditorIds = editorIds.filter((_, i) => i !== index);
+								setEditorIds(newEditorIds);
+							}}
+						></i>
+					</div>
+				))}
+				<div className='flex justify-center'>
+					<Button variant='primary' onClick={() => setEditorIds([...editorIds, ''])}>
+						Add User
+					</Button>
+				</div>
+			</div>
+		</div>
+	);
 
 	const addItemDiv = (
 		<div className='flex flex-col bg-gray-50 rounded-lg border border-gray-200 mb-2'>
@@ -245,7 +287,6 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					label='Tier List Id'
 					id='listId'
 					value={listId}
-					onChange={null}
 					placeholder=''
 					disabled={true}
 					className='mb-2'
@@ -271,6 +312,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				disabled={!isCreator}
 				className='mb-2'
 			/>
+			{addEditorsDiv}
 			{addItemDiv}
 
 			{/* Item Bank */}

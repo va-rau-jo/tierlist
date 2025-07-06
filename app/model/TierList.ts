@@ -3,8 +3,10 @@ import { Tier } from './Tier';
 import { TierListItem } from './TierListItem';
 import { Timestamp } from 'firebase/firestore'; // Import Timestamp from Firestore
 
-export type TierListRanking = Map<Tier, TierListItem[]>;
-export type TierListRankings = Map<string, TierListRanking>;
+// Maps a tier id to the items in that tier (a ranking)
+export type TierListRankings = Map<string, TierListItem[]>;
+// Maps a user ID to their tier list rankings
+export type TierListUserRankings = Map<string, TierListRankings>;
 
 export class TierList {
 	// Id of the tier list
@@ -29,7 +31,7 @@ export class TierList {
 	items: TierListItem[];
 	// Map of user id to ranking map. Ranking map maps Tier to list of tier
 	// list items.
-	rankings: TierListRankings;
+	userRankings: TierListUserRankings;
 
 	constructor(
 		creatorId: string,
@@ -41,7 +43,7 @@ export class TierList {
 		listDescription: string,
 		tiers: Tier[],
 		items: TierListItem[],
-		rankings: TierListRankings
+		userRankings: TierListUserRankings
 	) {
 		this.id = '';
 		this.creatorId = creatorId;
@@ -53,7 +55,7 @@ export class TierList {
 		this.description = listDescription;
 		this.tiers = tiers;
 		this.items = items;
-		this.rankings = rankings;
+		this.userRankings = userRankings;
 	}
 
 	toFirebaseObject() {
@@ -76,7 +78,7 @@ export class TierList {
 				type: item.type,
 				value: item.value,
 			})),
-			rankings: Array.from(this.rankings.entries()).map(([userId, rankings]) => ({
+			userRankings: Array.from(this.userRankings.entries()).map(([userId, rankings]) => ({
 				userId,
 				rankings: Array.from(rankings.entries()).map(([tier, items]) => ({
 					tier,
@@ -90,25 +92,26 @@ export class TierList {
 		if (!obj) {
 			throw new Error('Invalid tier list object');
 		}
-		console.log('FROM FIREBASE');
-		console.log(obj);
 		const tiers = obj.tiers.map((t: any) => new Tier(t.id, t.name, t.color));
 		const items = obj.items.map((i: any) => new TierListItem(i.id, i.type, i.value));
-		const rankings = new Map<string, TierListRanking>();
 
-		obj.rankings.forEach((ranking: any) => {
-			const userRanking: TierListRanking = new Map<Tier, TierListItem[]>();
-			ranking.rankings.forEach((r: any) => {
-				const tier = tiers.find((t) => t.id === r.tier.id);
-				const rankedItems = r.items
-					.map((itemId: string) => items.find((item: any) => item.id === itemId))
-					.filter((item: TierListItem | undefined): item is TierListItem => item !== undefined);
-				if (tier) {
-					userRanking.set(tier, rankedItems);
-				}
+		const userRankings = new Map<string, TierListRankings>();
+		// Convert obj.rankings to a map of TierListUserRankings
+		// Firebase only stores objects, so iterate over the object keys / values
+		if (obj.rankings && Object.keys(obj.rankings).length > 0) {
+			// Key: user ID, Value: array of TierListRankings
+			Object.entries(obj.rankings).forEach(([userId, userRanking]: [string, any]) => {
+				const rankings = new Map<string, TierListItem[]>();
+				// Key: Tier list ID, Value: TierListItem ID
+				Object.entries(userRanking).forEach(([tierId, itemIds]: [string, any]) => {
+					const tierItems = itemIds.map((itemId: string) =>
+						items.find((item: TierListItem) => item.id === itemId)
+					);
+					rankings.set(tierId, tierItems);
+				});
+				userRankings.set(userId, rankings);
 			});
-			rankings.set(ranking.userId, userRanking);
-		});
+		}
 
 		const tierlist = new TierList(
 			obj.creatorId,
@@ -120,7 +123,7 @@ export class TierList {
 			obj.description,
 			tiers,
 			items,
-			rankings
+			userRankings
 		);
 		tierlist.id = obj.id;
 		return tierlist;

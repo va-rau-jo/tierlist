@@ -2,26 +2,14 @@
 
 import React from 'react';
 import { TierList } from '../model/TierList';
-import Link from 'next/link'; // For linking to individual tier list pages
 import { ActionButton } from './Button';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface TierListItemCardProps {
 	tierList: TierList;
 }
 
 const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList }) => {
-	const router = useRouter();
-
-	const navigateToRankView = () => {
-		router.push(`/dashboard/rank/${tierList.id}`);
-	};
-
-	const navigateToEditView = (e: React.MouseEvent) => {
-		e.stopPropagation();
-		router.push(`/dashboard/edit/${tierList.id}`);
-	};
-
 	// Optional: Function to truncate description if it's too long
 	const truncateDescription = (text: string, maxLength: number) => {
 		if (text.length > maxLength) {
@@ -41,11 +29,13 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList }) => {
 		.map((name) => name[0])
 		.join('');
 
-	console.log(tierList);
-
 	return (
-		<div className='bg-white/50 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden w-full'>
-			<div className='px-4 py-2 sm:px-8 sm:py-2 cursor-pointer' onClick={navigateToRankView}>
+		<div className='relative bg-white/50 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden w-full'>
+			<Link
+				className='px-4 py-2 absolute w-full h-full'
+				href={`/dashboard/rank/${tierList.id}`}
+			></Link>
+			<div className='px-4 py-2 sm:px-8 sm:py-2 cursor-pointer'>
 				{/* Tierlist Title */}
 				<h3 className='text-3xl text-center font-bold text-gray-900 dark:text-white mb-2 line-clamp-2'>
 					{tierList.name}
@@ -76,15 +66,16 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList }) => {
 						</div>
 					</div>
 					{/* Actions like View, Edit, Share */}
-					<div className='my-auto'>
+					<div className='my-auto relative z-10'>
 						<div className='px-4 py-1 flex justify-center space-x-8'>
-							<ActionButton
-								onClick={navigateToEditView}
-								variant='outline'
-								className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium py-0'
-							>
-								Edit
-							</ActionButton>
+							<Link href={`/dashboard/edit/${tierList.id}`}>
+								<ActionButton
+									variant='outline'
+									className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium py-0'
+								>
+									Edit
+								</ActionButton>
+							</Link>
 							<ActionButton
 								onClick={() => {}}
 								variant='outline'

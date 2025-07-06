@@ -9,3 +9,5 @@ export class Tier {
 		this.color = color;
 	}
 }
+
+export const UNASSIGNED_TIER = 'unassigned';

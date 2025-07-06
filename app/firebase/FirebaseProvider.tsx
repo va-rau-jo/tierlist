@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { onAuthStateChanged, getAuth, User, signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { app, auth, db, firebaseConfig } from '../config/firebase_config';
+import { firebaseConfig } from '../config/firebase_config';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { addUser } from './firebase_utils';
 

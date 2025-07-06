@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 // Just redirect to dashboard if there is no ID.
-const EditRedirect = () => {
+const RankRedirect = () => {
 	const router = useRouter();
 
 	useEffect(() => {
@@ -12,4 +12,4 @@ const EditRedirect = () => {
 	}, [router]);
 };
 
-export default EditRedirect;
+export default RankRedirect;
