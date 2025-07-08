@@ -4,13 +4,13 @@ import React from 'react';
 import { TierList } from '../model/TierList';
 import { ActionButton } from './Button';
 import Link from 'next/link';
+import { getInitials } from '../utils';
 
 interface TierListItemCardProps {
 	tierList: TierList;
 }
 
 const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList }) => {
-	// Optional: Function to truncate description if it's too long
 	const truncateDescription = (text: string, maxLength: number) => {
 		if (text.length > maxLength) {
 			return text.substring(0, maxLength) + '...';
@@ -24,10 +24,7 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList }) => {
 		day: 'numeric',
 	});
 
-	const initials = tierList.creatorName
-		.split(' ')
-		.map((name) => name[0])
-		.join('');
+	const initials = getInitials(tierList.creatorName);
 
 	return (
 		<div className='relative bg-white/50 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden w-full'>

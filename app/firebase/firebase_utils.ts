@@ -12,7 +12,7 @@ import {
 import { getFirestore } from 'firebase/firestore';
 import { TierList, TierListRankings } from '../model/TierList';
 import { Tier } from '../model/Tier';
-import { TierListItem } from '../model/TierListItem';
+import { TierListItemModel } from '../model/TierListItem';
 import { User } from 'firebase/auth';
 
 export const shouldRedirectToLogin = (
@@ -65,7 +65,7 @@ export const updateTierList = async (
 			name: tier.name,
 			color: tier.color,
 		})),
-		items: newTierList.items.map((item: TierListItem) => ({
+		items: newTierList.items.map((item: TierListItemModel) => ({
 			id: item.id,
 			type: item.type,
 			value: item.value,
@@ -103,25 +103,21 @@ const updateEditorUserTierLists = async (
 	 */
 	for (const editorId of editorIds) {
 		const userTierListsCollectionRef = collection(db, `users/${editorId}/tierlists`);
-		const userTierListsSnapshot = await getDocs(userTierListsCollectionRef);
 
-		// if (userTierListsSnapshot.empty) {
-		// Create the collection if it doesn't exist
-		await setDoc(doc(userTierListsCollectionRef), {
-			tierListId: tierListId,
-			joinedAt: serverTimestamp(),
-		});
-		// }
+		// Check if the tierlist already exists in user's collection
+		const existingTierListQuery = query(
+			userTierListsCollectionRef,
+			where('tierListId', '==', tierListId)
+		);
+		const existingTierListDocs = await getDocs(existingTierListQuery);
 
-		// const userTierListRef = doc(db, `users/${editorId}/tierlists`, tierList.id);
-		// const existingDoc = await getDoc(userTierListRef);
-
-		// if (!existingDoc.exists()) {
-		// 	await setDoc(userTierListRef, {
-		// 		tierListId: tierList.id,
-		// 		joinedAt: serverTimestamp(),
-		// 	});
-		// }
+		// Only add if it doesn't exist yet
+		if (existingTierListDocs.empty) {
+			await setDoc(doc(userTierListsCollectionRef), {
+				tierListId: tierListId,
+				joinedAt: serverTimestamp(),
+			});
+		}
 	}
 };
 
@@ -235,4 +231,24 @@ export const getUserTierLists = async (userId: string, db: ReturnType<typeof get
 	// All user accessible tier lists
 	const tierLists = tierListDocs.docs.map((doc) => TierList.fromFirebase(doc.data()));
 	return tierLists;
+};
+
+export const getUserIdsToNamesMap = async (
+	userIds: string[],
+	db: ReturnType<typeof getFirestore>
+) => {
+	/**
+	 * Loads a map of user IDs to names from Firebase.
+	 * @param userIds - The IDs of the users whose names should be loaded.
+	 * @param db - The Firebase database object.
+	 * @returns A Promise of a Map of user IDs to names.
+	 */
+	const userRef = collection(db, 'users');
+	const userQuery = query(userRef, where('userId', 'in', userIds));
+	const userDocs = await getDocs(userQuery);
+	const userIdToNameMap = new Map<string, string>();
+	userDocs.forEach((doc) => {
+		userIdToNameMap.set(doc.data().userId, doc.data().name);
+	});
+	return userIdToNameMap;
 };

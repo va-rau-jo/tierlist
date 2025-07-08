@@ -2,7 +2,7 @@ import { SetStateAction, useEffect, useState } from 'react';
 import { Button } from './Button';
 import { Input } from './Input';
 import { useFirebase } from '../firebase/FirebaseProvider';
-import { TierListItem } from '../model/TierListItem';
+import { TierListItemModel } from '../model/TierListItem';
 import {
 	addTierList,
 	getTierList,
@@ -12,6 +12,7 @@ import {
 import { TierList, TierListRankings } from '../model/TierList';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Tier } from '../model/Tier';
+import { generateUniqueId } from '../utils';
 
 enum TierListEditorMode {
 	Create,
@@ -25,12 +26,8 @@ interface TierListEditorProps {
 	tierListId?: string;
 }
 
-const generateUniqueId = () => {
-	return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
-};
-
 const createNewTierListItem = () => {
-	return new TierListItem(generateUniqueId(), 'text', '');
+	return new TierListItemModel(generateUniqueId(), 'text', '');
 };
 
 const createNewTier = (name: string, color: string) => {
@@ -45,7 +42,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	// The current item we are trying to add
 	const [currentAddItem, setCurrentAddItem] = useState(createNewTierListItem());
 	// Items and tiers (tiers are started as defaults, items starts empty).
-	const [items, setItems] = useState<TierListItem[]>([]);
+	const [items, setItems] = useState<TierListItemModel[]>([]);
 	const [tiers, setTiers] = useState([
 		createNewTier('S', '#FF7F7F'),
 		createNewTier('A', '#FFBF7F'),
@@ -136,7 +133,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			setMessage('Please fill in the list name.');
 			return;
 		}
-		if (items.some((item: TierListItem) => !item.value.trim())) {
+		if (items.some((item: TierListItemModel) => !item.value.trim())) {
 			setMessage('Please ensure all items have a value or image URL.');
 			return;
 		}
@@ -323,7 +320,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					</span>
 				) : (
 					<div className='pt-2 pl-2 pr-2 flex flex-wrap space-x-2'>
-						{items.map((item: TierListItem, index) => (
+						{items.map((item: TierListItemModel, index) => (
 							<div
 								key={index}
 								className='w-15 mb-2 aspect-square flex items-center justify-center bg-white'

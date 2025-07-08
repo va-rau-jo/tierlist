@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Tier } from './Tier';
-import { TierListItem } from './TierListItem';
+import { TierListItemModel } from './TierListItem';
 import { Timestamp } from 'firebase/firestore'; // Import Timestamp from Firestore
 
 // Maps a tier id to the items in that tier (a ranking)
-export type TierListRankings = Map<string, TierListItem[]>;
+export type TierListRankings = Map<string, TierListItemModel[]>;
 // Maps a user ID to their tier list rankings
 export type TierListUserRankings = Map<string, TierListRankings>;
 
@@ -28,7 +28,7 @@ export class TierList {
 	// Tiers (S, A, etc)
 	tiers: Tier[];
 	// Tier list items that can be ranked
-	items: TierListItem[];
+	items: TierListItemModel[];
 	// Map of user id to ranking map. Ranking map maps Tier to list of tier
 	// list items.
 	userRankings: TierListUserRankings;
@@ -42,7 +42,7 @@ export class TierList {
 		listName: string,
 		listDescription: string,
 		tiers: Tier[],
-		items: TierListItem[],
+		items: TierListItemModel[],
 		userRankings: TierListUserRankings
 	) {
 		this.id = '';
@@ -73,7 +73,7 @@ export class TierList {
 				name: tier.name,
 				color: tier.color,
 			})),
-			items: this.items.map((item: TierListItem) => ({
+			items: this.items.map((item: TierListItemModel) => ({
 				id: item.id,
 				type: item.type,
 				value: item.value,
@@ -93,7 +93,7 @@ export class TierList {
 			throw new Error('Invalid tier list object');
 		}
 		const tiers = obj.tiers.map((t: any) => new Tier(t.id, t.name, t.color));
-		const items = obj.items.map((i: any) => new TierListItem(i.id, i.type, i.value));
+		const items = obj.items.map((i: any) => new TierListItemModel(i.id, i.type, i.value));
 
 		const userRankings = new Map<string, TierListRankings>();
 		// Convert obj.rankings to a map of TierListUserRankings
@@ -101,11 +101,11 @@ export class TierList {
 		if (obj.rankings && Object.keys(obj.rankings).length > 0) {
 			// Key: user ID, Value: array of TierListRankings
 			Object.entries(obj.rankings).forEach(([userId, userRanking]: [string, any]) => {
-				const rankings = new Map<string, TierListItem[]>();
+				const rankings = new Map<string, TierListItemModel[]>();
 				// Key: Tier list ID, Value: TierListItem ID
 				Object.entries(userRanking).forEach(([tierId, itemIds]: [string, any]) => {
 					const tierItems = itemIds.map((itemId: string) =>
-						items.find((item: TierListItem) => item.id === itemId)
+						items.find((item: TierListItemModel) => item.id === itemId)
 					);
 					rankings.set(tierId, tierItems);
 				});
