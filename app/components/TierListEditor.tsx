@@ -279,7 +279,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					{message}
 				</div>
 			)}
-			{listId ? (
+			{listId && (
 				<Input
 					label='Tier List Id'
 					id='listId'
@@ -288,7 +288,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					disabled={true}
 					className='mb-2'
 				/>
-			) : null}
+			)}
 			<Input
 				label='Tier List Name'
 				id='listName'

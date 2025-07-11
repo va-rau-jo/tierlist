@@ -3,8 +3,7 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { TierListItem, TierListItemModel } from '../model/TierListItem';
-import { getInitials } from '../utils';
+import { TierListItem, TierListItemModel } from '../../../model/TierListItem';
 
 interface DraggableItemProps {
 	item: TierListItemModel;
@@ -17,20 +16,14 @@ const DraggableItem: React.FC<DraggableItemProps> = ({ item, isOverlay = false }
 		data: { item: item },
 	});
 
+	const baseClasses =
+		'w-14 mb-2 aspect-square flex items-center justify-center text-sm font-medium select-none';
+
 	// TierListItem means this is a different user's ranking, so not draggable.
 	if (item instanceof TierListItem) {
-		const initials = getInitials(item.userName);
 		return (
 			<div className='relative'>
-				<span className='w-14 mb-2 aspect-square flex items-center justify-center bg-white/50'>
-					{item.value}
-				</span>
-				<div className='flex absolute -top-2 -left-2 bg-red-500 w-6 h-6 rounded-full items-center group'>
-					<span className='text-white font-bold select-none'>{initials}</span>
-					<div className='absolute font-bold -top-6 left-0 bg-black/25 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap'>
-						{item.userName}
-					</div>
-				</div>
+				<span className={`${baseClasses} bg-white/50`}>{item.value}</span>
 			</div>
 		);
 	}
@@ -48,13 +41,12 @@ const DraggableItem: React.FC<DraggableItemProps> = ({ item, isOverlay = false }
 			style={style}
 			{...listeners} // Attach event listeners for dragging
 			{...attributes} // Attach accessibility attributes
-			className={`
-        draggable-tier-item
-        w-14 mb-2 aspect-square flex items-center justify-center bg-white
-        ${isOverlay ? 'z-50 border-2 border-blue-500' : ''}
-      `}
 		>
-			<span className='text-sm font-medium'>{item.value}</span>
+			<span
+				className={`${baseClasses} bg-white ${isOverlay ? 'z-50 border-2 border-blue-500' : ''}`}
+			>
+				{item.value}
+			</span>
 		</div>
 	);
 };

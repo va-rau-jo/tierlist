@@ -1,10 +1,10 @@
 // Represents a tier list when displayed in a list of tier lists.
 
 import React from 'react';
-import { TierList } from '../model/TierList';
-import { ActionButton } from './Button';
+import { TierList } from '../../model/TierList';
+import { ActionButton } from '../../components/Button';
 import Link from 'next/link';
-import { getInitials } from '../utils';
+import { getInitials } from '../../utils';
 
 interface TierListItemCardProps {
 	tierList: TierList;

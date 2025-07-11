@@ -6,7 +6,7 @@ import { useFirebase } from '../firebase/FirebaseProvider';
 import { Button } from '../components/Button';
 import { getUserTierLists, shouldRedirectToLogin } from '../firebase/firebase_utils';
 import { TierList } from '../model/TierList';
-import TierListItemCard from '../components/TierListItemCard';
+import TierListItemCard from './components/TierListItemCard';
 import NavBar from '../components/NavBar';
 import Link from 'next/link';
 
