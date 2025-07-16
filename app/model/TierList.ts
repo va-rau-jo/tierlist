@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Tier } from './Tier';
+import { Tier, UNASSIGNED_TIER } from './Tier';
 import { TierListItemModel } from './TierListItem';
 import { Timestamp } from 'firebase/firestore'; // Import Timestamp from Firestore
 
@@ -103,12 +103,21 @@ export class TierList {
 			Object.entries(obj.rankings).forEach(([userId, userRanking]: [string, any]) => {
 				const rankings = new Map<string, TierListItemModel[]>();
 				// Key: Tier list ID, Value: TierListItem ID
+				// Add all ranked items (does not include unassigned items)
+				const rankedItemIds = new Set<string>();
 				Object.entries(userRanking).forEach(([tierId, itemIds]: [string, any]) => {
-					const tierItems = itemIds.map((itemId: string) =>
-						items.find((item: TierListItemModel) => item.id === itemId)
-					);
+					const tierItems = itemIds.map((itemId: string) => {
+						rankedItemIds.add(itemId);
+						return items.find((item: TierListItemModel) => item.id === itemId);
+					});
 					rankings.set(tierId, tierItems);
 				});
+				// Add unassigned items to the unassigned tier
+				rankings.set(
+					UNASSIGNED_TIER,
+					items.filter((item: TierListItemModel) => !rankedItemIds.has(item.id))
+				);
+
 				userRankings.set(userId, rankings);
 			});
 		}

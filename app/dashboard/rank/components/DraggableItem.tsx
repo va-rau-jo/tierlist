@@ -17,7 +17,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({ item, isOverlay = false }
 	});
 
 	const baseClasses =
-		'w-14 mb-2 aspect-square flex items-center justify-center text-sm font-medium select-none';
+		'w-15 aspect-square flex items-center justify-center text-sm font-medium select-none';
 
 	// TierListItem means this is a different user's ranking, so not draggable.
 	if (item instanceof TierListItem) {

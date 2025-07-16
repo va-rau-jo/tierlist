@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { TierList, TierListRankings } from '../model/TierList';
-import { Tier } from '../model/Tier';
+import { Tier, UNASSIGNED_TIER } from '../model/Tier';
 import { TierListItemModel } from '../model/TierListItem';
 import { User } from 'firebase/auth';
 
@@ -140,15 +140,14 @@ export const updateTierListRankings = async (
 		// Tier list should exist.
 		const currentRankings = tierListDoc.data().rankings || {};
 
+		// Skip unassigned items
 		const firebaseCompatibleRanking = Object.fromEntries(
 			new Map(
-				Array.from(rankings.entries()).map(([tierId, items]) => [
-					tierId,
-					items.map((item) => item.id),
-				])
+				Array.from(rankings.entries())
+					.filter(([tierId]) => tierId !== UNASSIGNED_TIER)
+					.map(([tierId, items]) => [tierId, items.map((item) => item.id)])
 			)
 		);
-
 		console.log(firebaseCompatibleRanking);
 
 		const updatedRankings = {

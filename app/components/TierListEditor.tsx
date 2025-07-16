@@ -13,6 +13,7 @@ import { TierList, TierListRankings } from '../model/TierList';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Tier } from '../model/Tier';
 import { generateUniqueId } from '../utils';
+import { TIER_ITEM_HEIGHT } from '../constants';
 
 enum TierListEditorMode {
 	Create,
@@ -335,10 +336,10 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			<div className='space-y-1 bg-black p-1'>
 				{/* Tiers */}
 				{tiers.map((tier) => (
-					<div className='h-20 flex' key={tier.id}>
+					<div className={`'h-${TIER_ITEM_HEIGHT} flex`} key={tier.id}>
 						<div className='flex grow-1 sm:flex-row gap-3 items-center bg-[#404040]'>
 							<div
-								className='h-20 aspect-square flex items-center justify-center'
+								className={`h-${TIER_ITEM_HEIGHT} aspect-square flex items-center justify-center`}
 								style={{ backgroundColor: tier.color }}
 							>
 								<input
