@@ -3,6 +3,7 @@ import { TierList, TierListUserRankings } from '@/app/model/TierList';
 import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
 import DraggableItem from './DraggableItem';
 import { AVERAGES_TIER_ITEM_HEIGHT, TIER_ROW_HEIGHT } from '@/app/constants';
+import { useState } from 'react';
 
 class ItemStatus {
 	item: TierListItem;
@@ -69,15 +70,17 @@ interface AveragesDisplayProps {
 	tierList: TierList;
 	// Maps user ID to their tier list rankings
 	allRankings: TierListUserRankings;
-	// TODO: Delete this
-	tempId: string;
 }
 
-export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
-	tierList,
-	allRankings,
-	tempId,
-}) => {
+export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allRankings }) => {
+	// Tuple with [tierIndex, indexWithinTier] that identifies the item to display.
+	const [displayedItemIndex, setDisplayedItemIndex] = useState<number[]>([]);
+
+	const toggleDisplayedItemIndex = (index: number[]) => {
+		const sameIndex = displayedItemIndex[0] === index[0] && displayedItemIndex[1] === index[1];
+		setDisplayedItemIndex(sameIndex ? [] : index);
+	};
+
 	// Maps item ID to the item "value"
 	const averages = new Map<string, ItemStatus>();
 	const tiers = tierList.tiers;
@@ -103,39 +106,37 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
 	}
 	let items = Array.from(averages.values());
 
-	if (tempId === 'TEST1') {
-		items = [
-			new ItemStatus(new TierListItemModel('0', 'text', '0'), 1, 0),
-			new ItemStatus(new TierListItemModel('0', 'text', '0'), 1, 0),
-			new ItemStatus(new TierListItemModel('0', 'text', '0'), 1, 0),
-			new ItemStatus(new TierListItemModel('0.33', 'text', '0.33'), 1, 0.33),
-			new ItemStatus(new TierListItemModel('0.33', 'text', '0.33'), 1, 0.33),
-			new ItemStatus(new TierListItemModel('1', 'text', '1'), 1, 1),
-			new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
-			new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
-			new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('1', 'text', '1'), 1, 1),
-			new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
-			new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
-			new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
-			new ItemStatus(new TierListItemModel('1.5', 'text', '1.5'), 2, 3),
-			new ItemStatus(new TierListItemModel('2', 'text', '2'), 1, 2),
-			new ItemStatus(new TierListItemModel('3', 'text', '3'), 1, 3),
-			new ItemStatus(new TierListItemModel('4', 'text', '4'), 1, 4),
-			new ItemStatus(new TierListItemModel('4.5', 'text', '4.5'), 1, 4.5),
-			new ItemStatus(new TierListItemModel('5 (2)', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('5 (4)', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('5 (5)', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('5 (2)', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('5 (4)', 'text', '5'), 1, 5),
-			new ItemStatus(new TierListItemModel('5 (5)', 'text', '5'), 1, 5),
-		];
-	}
+	items = [
+		new ItemStatus(new TierListItemModel('0', 'text', '0'), 1, 0),
+		new ItemStatus(new TierListItemModel('0', 'text', '0'), 1, 0),
+		new ItemStatus(new TierListItemModel('0', 'text', '0'), 1, 0),
+		new ItemStatus(new TierListItemModel('0.33', 'text', '0.33'), 1, 0.33),
+		new ItemStatus(new TierListItemModel('0.33', 'text', '0.33'), 1, 0.33),
+		new ItemStatus(new TierListItemModel('1', 'text', '1'), 1, 1),
+		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
+		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
+		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('1', 'text', '1'), 1, 1),
+		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
+		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
+		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
+		new ItemStatus(new TierListItemModel('1.5', 'text', '1.5'), 2, 3),
+		new ItemStatus(new TierListItemModel('2', 'text', '2'), 1, 2),
+		new ItemStatus(new TierListItemModel('3', 'text', '3'), 1, 3),
+		new ItemStatus(new TierListItemModel('4', 'text', '4'), 1, 4),
+		new ItemStatus(new TierListItemModel('4.5', 'text', '4.5'), 1, 4.5),
+		new ItemStatus(new TierListItemModel('5 (2)', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('5 (4)', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('5 (5)', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('5 (2)', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('5 (4)', 'text', '5'), 1, 5),
+		new ItemStatus(new TierListItemModel('5 (5)', 'text', '5'), 1, 5),
+	];
 
 	items.forEach((item) => (item.average = Math.round((item.sum / item.count) * 100) / 100));
 	items.sort((a, b) => a.average - b.average);
@@ -157,17 +158,17 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
 			itemMappings.push([item.average, [item]]);
 			gradientRowsIndex += 1;
 		} else {
-			// if (previousItem.average === item.average) {
-			// 	const lastItem: AverageItemMapping = itemMappings[itemMappings.length - 1];
-			// 	lastItem[1].push(item);
-			// 	if (lastItem[1].length % 2 === 1) {
-			// 		// Only add if we have odd number of items (will go to next line)
-			// 		gradientRowsIndex += 1;
-			// 	}
-			// } else {
-			itemMappings.push([item.average, [item]]);
-			gradientRowsIndex += 1;
-			// }
+			if (previousItem.average === item.average) {
+				const lastItem: AverageItemMapping = itemMappings[itemMappings.length - 1];
+				lastItem[1].push(item);
+				if (lastItem[1].length % 2 === 1) {
+					// Only add if we have odd number of items (will go to next line)
+					gradientRowsIndex += 1;
+				}
+			} else {
+				itemMappings.push([item.average, [item]]);
+				gradientRowsIndex += 1;
+			}
 		}
 		previousItem = item;
 		// While loop to possibly skip indices that are not rated at all
@@ -177,45 +178,41 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
 		}
 	}
 
-	// const tierColorPercentages: number[] = [];
-	const tierColorPercentages: number[] = [0, 16, 33, 50, 67, 83];
+	const tierColorPercentages = tiers.map((t, i) => (i / tiers.length) * 100);
 
-	// for (let i = 0; i < colors.length; i++) {
-	// 	const index = tierMarkersIndices[i];
-	// 	let percentage = Math.round((100 * (index - 1)) / gradientRowsIndex);
-	// 	while (tierColorPercentages.includes(percentage)) {
-	// 		percentage += 1;
-	// 	}
-	// 	tierColorPercentages.push(percentage);
-	// }
-	console.log(tierColorPercentages);
-
-	const renderItemPoint = (itemMapping: [number, ItemStatus]) => {
-		const rowHeight = `calc(var(--spacing) * ${TIER_ROW_HEIGHT}`;
-		const topPx = rowHeight + ' * ' + itemMapping[0];
+	const renderItemPoints = (itemMapping: [number, ItemStatus[]]) => {
+		const tierIndex = itemMapping[0];
+		// Round to the nearest 2 decimals.
+		const percentage = Math.round((10000 * tierIndex) / tiers.length) / 100;
+		// Center the points in the middle of the row
+		const offset = TIER_ROW_HEIGHT / 2 - 1;
+		const topPx = `calc(${percentage}% + var(--spacing) * ${offset})`;
 		return (
 			<div
-				className='absolute w-2 h-2 rounded-full border-2 border-black bg-black'
-				style={{ top: topPx + 'px' }}
-			></div>
+				key={tierIndex}
+				className='absolute flex flex-wrap justify-center space-x-1 space-y-1 ml-2'
+				style={{ top: topPx }}
+			>
+				{itemMapping[1].map((status, i) => (
+					<div
+						key={i}
+						className='relative w-2 h-2 rounded-full border-2 border-black bg-black cursor-pointer z-100'
+						onClick={() => toggleDisplayedItemIndex([tierIndex, i])}
+					>
+						{tierIndex === displayedItemIndex[0] && i === displayedItemIndex[1] && (
+							<div
+								className='absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white border border-gray-300 rounded px-2 py-1 no-wrap text-sm shadow-lg cursor-default'
+								onClick={(e) => e.stopPropagation()}
+							>
+								<div>{status.item.value}</div>
+								<div>Average: {status.average}</div>
+							</div>
+						)}
+					</div>
+				))}
+			</div>
 		);
 	};
-
-	// Height of the average display (0- max # of tiers)
-	const totalHeight = tiers.length;
-	const itemRenderArray = [];
-	for (const itemMapping of itemMappings) {
-		console.log(itemMapping);
-		const status = itemMapping[1][0];
-		itemRenderArray.push(renderItemPoint(itemMapping));
-		// if (itemMapping[1].length === 1) {
-		// 	// solo item
-		// 	const status = itemMapping[1][0];
-		// 	itemRenderArray.push(renderSingleItemStatus(status));
-		// } else {
-		// 	itemRenderArray.push(renderMultipleItemStatuses(itemMapping[1]));
-		// }
-	}
 
 	const tierColorGradients = tierColorPercentages.map(
 		(percentage, i) => colors[i] + ' ' + percentage + '%'
@@ -223,19 +220,18 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
 	const gradientBarStyle = {
 		background: `local linear-gradient(to bottom, ${tierColorGradients.join(', ')})`,
 	};
-	console.log(itemRenderArray);
 
 	return (
 		<div className='flex relative flex-col flex-1 justify-center items-center border-t-4 border-black'>
 			<div className='absolute flex -top-9'>
 				<ColumnHeader text='Average' />
 			</div>
-			<div className='flex h-full w-full overflow-hidden overflow-y-scroll'>
+			<div className='flex h-full w-full'>
 				<div
-					className='relative flex flex-col min-h-full h-fit w-full overflow-y-hidden bg-local items-center'
+					className='relative flex flex-col min-h-full h-fit w-full items-center'
 					style={gradientBarStyle}
 				>
-					{itemRenderArray}
+					{itemMappings.map(renderItemPoints)}
 					{tierColorPercentages.map((percentage: number, i: number) => (
 						<div
 							className='absolute flex w-full left-0 group'
@@ -247,9 +243,9 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
 							}}
 						>
 							<div className='relative w-2 h-px border border-gray-500'>
-								<div className='invisible group-hover:visible font-bold select-none absolute left-1 bottom-0 opacity-100 rounded whitespace-nowrap'>
+								{/* <div className='invisible group-hover:visible font-bold select-none absolute left-1 bottom-0 opacity-100 rounded whitespace-nowrap'>
 									{tiers[i].name}
-								</div>
+								</div> */}
 							</div>
 						</div>
 					))}
