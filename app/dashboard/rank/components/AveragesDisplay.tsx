@@ -1,8 +1,7 @@
 import ColumnHeader from '@/app/components/ColumnHeader';
 import { TierList, TierListUserRankings } from '@/app/model/TierList';
 import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
-import DraggableItem from './DraggableItem';
-import { AVERAGES_TIER_ITEM_HEIGHT, TIER_ROW_HEIGHT } from '@/app/constants';
+import { TIER_ROW_HEIGHT } from '@/app/constants';
 import { useState } from 'react';
 
 class ItemStatus {
@@ -23,49 +22,6 @@ class ItemStatus {
 
 type AverageItemMapping = [number, Array<ItemStatus>];
 
-const renderSingleItemStatus = (status: ItemStatus) => {
-	return (
-		<div key={status.item.id} className='w-fit'>
-			<DraggableItem item={status.item} />
-		</div>
-	);
-};
-
-const renderMultipleItemStatuses = (statuses: ItemStatus[]) => {
-	const items = [];
-	for (let i = 0; i < statuses.length; i += 2) {
-		if (i + 1 === statuses.length) {
-			const status = statuses[i];
-			items.push(
-				<div key={i} className='w-fit'>
-					<DraggableItem item={status.item} />
-				</div>
-			);
-		} else {
-			const status1 = statuses[i];
-			const status2 = statuses[i + 1];
-			items.push(
-				<div key={i} className='flex flex-row space-x-2'>
-					<div className='w-fit'>
-						<DraggableItem item={status1.item} />
-					</div>
-					<div className='w-fit'>
-						<DraggableItem item={status2.item} />
-					</div>
-				</div>
-			);
-		}
-	}
-	return (
-		<div
-			key={statuses[0].item.id}
-			className='flex flex-col border border-indigo-600 px-2 justify-center items-center'
-		>
-			{items}
-		</div>
-	);
-};
-
 interface AveragesDisplayProps {
 	tierList: TierList;
 	// Maps user ID to their tier list rankings
@@ -84,6 +40,15 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 	// Maps item ID to the item "value"
 	const averages = new Map<string, ItemStatus>();
 	const tiers = tierList.tiers;
+	const colors = tiers.map((tier) => tier.color);
+	// The percentage where each tier should start (0-100%)
+	const tierColorPercentages = tiers.map((_, i) => (i / tiers.length) * 100);
+	// The tier colors and their percentages.
+	const gradientBarStyle = {
+		background: `local linear-gradient(to bottom, ${tierColorPercentages
+			.map((percentage, i) => `${colors[i]} ${percentage}%`)
+			.join(', ')})`,
+	};
 
 	// Create list of average items
 	for (const [, rankings] of allRankings.entries()) {
@@ -141,8 +106,6 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 	items.forEach((item) => (item.average = Math.round((item.sum / item.count) * 100) / 100));
 	items.sort((a, b) => a.average - b.average);
 
-	const colors = tiers.map((tier) => tier.color);
-
 	// Map items to their ranking number, dupes are concatenated into 1 array.
 	const itemMappings: AverageItemMapping[] = [];
 	// Stores the indices of the tier markers (relative to total number of rows)
@@ -178,8 +141,6 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 		}
 	}
 
-	const tierColorPercentages = tiers.map((t, i) => (i / tiers.length) * 100);
-
 	const renderItemPoints = (itemMapping: [number, ItemStatus[]]) => {
 		const tierIndex = itemMapping[0];
 		// Round to the nearest 2 decimals.
@@ -214,13 +175,6 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 		);
 	};
 
-	const tierColorGradients = tierColorPercentages.map(
-		(percentage, i) => colors[i] + ' ' + percentage + '%'
-	);
-	const gradientBarStyle = {
-		background: `local linear-gradient(to bottom, ${tierColorGradients.join(', ')})`,
-	};
-
 	return (
 		<div className='flex relative flex-col flex-1 justify-center items-center border-t-4 border-black'>
 			<div className='absolute flex -top-9'>
@@ -242,11 +196,7 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 								top: 'calc(' + percentage + '%)',
 							}}
 						>
-							<div className='relative w-2 h-px border border-gray-500'>
-								{/* <div className='invisible group-hover:visible font-bold select-none absolute left-1 bottom-0 opacity-100 rounded whitespace-nowrap'>
-									{tiers[i].name}
-								</div> */}
-							</div>
+							<div className='relative w-2 h-px border border-gray-500'></div>
 						</div>
 					))}
 				</div>
