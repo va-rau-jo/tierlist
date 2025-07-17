@@ -72,7 +72,7 @@ const RankPage: React.FC = () => {
 				if (tierList.userRankings) {
 					// All other user IDs who have ranked the tier list.
 					const userIds = Array.from(tierList.userRankings.keys());
-					setUserIdToNameMap(await getUserIdsToNamesMap(userIds, db));
+					setUserIdToNameMap(await getUserIdsToNamesMap(new Set(userIds), db));
 					const userRanking = tierList.userRankings.get(user.uid);
 					if (userRanking) {
 						// We will set the current user's rankings since it exists.
@@ -195,7 +195,7 @@ const RankPage: React.FC = () => {
 		setMessage('Rankings saved successfully!');
 	};
 
-	const isEditor = tierList.creatorId === user.uid || tierList.editorIds.includes(user.uid);
+	const isEditor = tierList.creatorId === user.uid || tierList.editorIds.has(user.uid);
 
 	const header = (
 		<>
@@ -345,7 +345,7 @@ const RankPage: React.FC = () => {
 							</div>
 							{isDisplayingAverage && (
 								<>
-									<AveragesDisplay tierList={tierList} allRankings={allRankings} tempId='TEST' />
+									<AveragesDisplay tierList={tierList} allRankings={allRankings} />
 								</>
 							)}
 						</div>

@@ -16,7 +16,7 @@ export class TierList {
 	// Name of the creator.
 	creatorName: string;
 	// Ids of allowed editors
-	editorIds: string[];
+	editorIds: Set<string>;
 	// Created timestamp
 	createdAt: Timestamp;
 	// Updated timestamp
@@ -36,7 +36,7 @@ export class TierList {
 	constructor(
 		creatorId: string,
 		creatorName: string,
-		editorIds: string[],
+		editorIds: Set<string>,
 		createdAt: Timestamp,
 		lastUpdatedAt: Timestamp,
 		listName: string,
@@ -63,7 +63,7 @@ export class TierList {
 			id: this.id,
 			creatorId: this.creatorId,
 			creatorName: this.creatorName,
-			editorIds: this.editorIds,
+			editorIds: Array.from(this.editorIds),
 			createdAt: this.createdAt,
 			lastUpdatedAt: this.lastUpdatedAt,
 			name: this.name,
@@ -125,7 +125,7 @@ export class TierList {
 		const tierlist = new TierList(
 			obj.creatorId,
 			obj.creatorName,
-			obj.editorIds,
+			new Set(obj.editorIds),
 			obj.createdAt,
 			obj.lastUpdatedAt,
 			obj.name,

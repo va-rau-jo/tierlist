@@ -59,7 +59,7 @@ export const updateTierList = async (
 		lastUpdatedAt: serverTimestamp(),
 		name: newTierList.name,
 		description: newTierList.description,
-		editorIds: newTierList.editorIds,
+		editorIds: Array.from(newTierList.editorIds),
 		tiers: newTierList.tiers.map((tier: Tier) => ({
 			id: tier.id,
 			name: tier.name,
@@ -93,7 +93,7 @@ export const getTierList = async (tierListId: string, db: ReturnType<typeof getF
 };
 
 const updateEditorUserTierLists = async (
-	editorIds: string[],
+	editorIds: Set<string>,
 	tierListId: string,
 	db: ReturnType<typeof getFirestore>
 ) => {
@@ -101,6 +101,7 @@ const updateEditorUserTierLists = async (
 	 * Updates the user profiles of all editors to include the new tier list.
 	 * This function adds the tier list ID to each editor's list of tier lists in their user profile.
 	 */
+	// Remove duplicates
 	for (const editorId of editorIds) {
 		const userTierListsCollectionRef = collection(db, `users/${editorId}/tierlists`);
 
@@ -215,7 +216,6 @@ export const getUserTierLists = async (userId: string, db: ReturnType<typeof get
 	// Fetch list of ids that the user has stored as joined tier lists.
 	const userTierListsRef = collection(db, `users/${userId}/tierlists`);
 	const userTierListsSnapshot = await getDocs(userTierListsRef);
-	console.log(userTierListsSnapshot.empty);
 	const userTierListIds = userTierListsSnapshot.docs.map((doc) => doc.data().tierListId);
 
 	if (userTierListIds.length === 0) {
@@ -233,15 +233,17 @@ export const getUserTierLists = async (userId: string, db: ReturnType<typeof get
 };
 
 export const getUserIdsToNamesMap = async (
-	userIds: string[],
+	userIdsSet: Set<string>,
 	db: ReturnType<typeof getFirestore>
 ) => {
 	/**
 	 * Loads a map of user IDs to names from Firebase.
-	 * @param userIds - The IDs of the users whose names should be loaded.
+	 * @param userIdsSet - The IDs of the users whose names should be loaded.
 	 * @param db - The Firebase database object.
 	 * @returns A Promise of a Map of user IDs to names.
 	 */
+	const userIds = Array.from(userIdsSet);
+	console.log(userIds);
 	const userRef = collection(db, 'users');
 	const userQuery = query(userRef, where('userId', 'in', userIds));
 	const userDocs = await getDocs(userQuery);

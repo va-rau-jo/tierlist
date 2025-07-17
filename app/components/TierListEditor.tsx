@@ -8,6 +8,7 @@ import {
 	getTierList,
 	updateUserTierList,
 	updateTierList,
+	getUserIdsToNamesMap,
 } from '../firebase/firebase_utils';
 import { TierList, TierListRankings } from '../model/TierList';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
@@ -36,7 +37,7 @@ const createNewTier = (name: string, color: string) => {
 };
 
 const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => {
-	const { db, user } = useFirebase();
+	const { db, isLoading, user } = useFirebase();
 	// Name and description of the tier list
 	const [listName, setListName] = useState('');
 	const [listDescription, setListDescription] = useState('');
@@ -61,13 +62,19 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const [isLoadingTierList, setIsLoadingTierList] = useState(true);
 	const [creatorId, setCreatorId] = useState(user?.uid);
 	const [editorIds, setEditorIds] = useState<string[]>([]);
+	const [editorNames, setEditorNames] = useState<Map<string, string>>(new Map<string, string>());
 
 	useEffect(() => {
+		if (isLoading || !user || !db) {
+			// If user/db/isLoading are missing/true, Firebase is not ready.
+			return;
+		}
+
 		const fetchTierList = async () => {
 			if (mode == TierListEditorMode.Create) {
-				setIsLoadingTierList(false);
-			}
-			if (mode === TierListEditorMode.Edit && listId && db) {
+				setEditorIds([user.uid]);
+				setEditorNames(await getUserIdsToNamesMap(new Set([user.uid]), db));
+			} else if (mode === TierListEditorMode.Edit && listId) {
 				const tierListDoc = await getTierList(listId, db);
 				if (tierListDoc) {
 					setListName(tierListDoc.name);
@@ -75,14 +82,17 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					setItems(tierListDoc.items);
 					setTiers(tierListDoc.tiers);
 					setCreatorId(tierListDoc.creatorId);
-					setEditorIds(tierListDoc.editorIds);
-					setIsLoadingTierList(false);
+					setEditorIds(Array.from(tierListDoc.editorIds));
+					setEditorNames(await getUserIdsToNamesMap(tierListDoc.editorIds, db));
 				}
+			} else {
+				throw Error('Unexpected error / tier list editor mode.');
 			}
+			setIsLoadingTierList(false);
 		};
 
 		fetchTierList();
-	}, [mode, listId, db]);
+	}, [mode, listId, db, user, isLoading]);
 
 	if (!user || !db) {
 		return null;
@@ -154,7 +164,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			let newTierList = new TierList(
 				user.uid,
 				user.displayName || '',
-				editorIds,
+				new Set(editorIds),
 				serverTimestamp() as Timestamp,
 				serverTimestamp() as Timestamp,
 				listName,
@@ -187,24 +197,24 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		}
 	};
 
+	const handleEditorIdsChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+		const newEditorIds = [...editorIds];
+		newEditorIds[index] = e.target.value;
+		setEditorIds(newEditorIds);
+
+		getUserIdsToNamesMap(new Set(newEditorIds), db).then((names) => {
+			setEditorNames(names);
+		});
+	};
+
+	console.log(editorNames);
+
 	const addEditorsDiv = (
 		<div className='flex flex-col bg-gray-50 rounded-lg border border-gray-200 mb-2'>
 			<h2 className='text-center text-xl'>Add Editors</h2>
 			<div className='flex flex-col space-y-2 p-4'>
 				{editorIds.map((user, index) => (
 					<div key={index} className='flex items-center gap-2'>
-						<Input
-							label=''
-							id={`user-${index}`}
-							value={user}
-							onChange={(e) => {
-								const newEditorIds = [...editorIds];
-								newEditorIds[index] = e.target.value;
-								setEditorIds(newEditorIds);
-							}}
-							placeholder="Enter the user's ID"
-							className='flex-grow'
-						/>
 						<i
 							className='fas fa-trash trashcan-icon cursor-pointer'
 							onClick={() => {
@@ -212,6 +222,19 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 								setEditorIds(newEditorIds);
 							}}
 						></i>
+						<Input
+							label=''
+							id={`user-${index}`}
+							value={user}
+							onChange={(e) => handleEditorIdsChange(e, index)}
+							placeholder="Enter the user's ID"
+							className='flex-grow'
+						/>
+						{editorNames.has(editorIds[index]) ? (
+							<span className='text-green-600'> {editorNames.get(editorIds[index])} </span>
+						) : (
+							<span> User Not Found </span>
+						)}
 					</div>
 				))}
 				<div className='flex justify-center'>
