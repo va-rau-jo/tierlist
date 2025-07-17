@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useFirebase } from '@/app/firebase/FirebaseProvider';
 import { ActionButton, Button } from '@/app/components/Button';
 import {
+	FirebaseReturnStatus,
 	getTierList,
 	getUserIdsToNamesMap,
 	shouldRedirectToLogin,
@@ -61,8 +62,7 @@ const RankPage: React.FC = () => {
 
 			try {
 				const tierList = await getTierList(tierListId, db);
-				if (!tierList) {
-					// Tier list not found
+				if (tierList === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
 					router.push('/dashboard');
 					return;
 				}

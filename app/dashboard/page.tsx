@@ -4,16 +4,18 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '../firebase/FirebaseProvider';
 import { Button } from '../components/Button';
-import { getUserTierLists, shouldRedirectToLogin } from '../firebase/firebase_utils';
+import { getUserTierLists, joinTierList, shouldRedirectToLogin } from '../firebase/firebase_utils';
 import { TierList } from '../model/TierList';
 import TierListItemCard from './components/TierListItemCard';
 import NavBar from '../components/NavBar';
 import Link from 'next/link';
+import { Input } from '../components/Input';
 
 const DashboardPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
 	const router = useRouter();
 	const [userTierLists, setUserTierLists] = React.useState<TierList[]>([]);
+	const [joinTierListId, setJoinTierListId] = React.useState<string>('');
 	const [isLoadingTierLists, setIsLoadingTierLists] = React.useState(true);
 
 	useEffect(() => {
@@ -50,6 +52,14 @@ const DashboardPage: React.FC = () => {
 		(tierList: TierList) => tierList.creatorId !== user.uid
 	);
 
+	const joinTierListOnClick = () => {
+		joinTierList(joinTierListId, user.uid, db).then(() =>
+			getUserTierLists(user.uid, db).then((tierLists) => {
+				setUserTierLists(tierLists);
+			})
+		);
+	};
+
 	return (
 		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200 flex flex-col'>
 			<NavBar />
@@ -58,28 +68,41 @@ const DashboardPage: React.FC = () => {
 					<Link href={'/dashboard/create'}>
 						<Button variant='outline'>Create New Tierlist</Button>
 					</Link>
-					<Link href={'/dashboard/join'}>
-						<Button variant='outline'>Join Tierlist</Button>
-					</Link>
 				</div>
 				<div className='flex flex-1 justify-center w-full'>
-					<div className='flex flex-col w-full mx-16 mt-16 items-center'>
+					<div className='flex flex-col w-full mx-16 mt-8 items-center'>
 						<h1> Your Tierlists</h1>
-						<div className='flex'>
-							{userTierLists.length == 0 ? (
-								<p className='text-gray-500 italic mt-4'>
-									No tierlists found. Create one to get started!
-								</p>
-							) : (
-								<div>
-									{userCreatedTierLists.map((tierList: TierList) => (
-										<TierListItemCard key={tierList.id} tierList={tierList} />
-									))}
-									{otherTierLists.map((tierList: TierList) => (
-										<TierListItemCard key={tierList.id} tierList={tierList} />
-									))}
-								</div>
-							)}
+						<div>
+							<Input
+								label=''
+								id={'join'}
+								value={joinTierListId}
+								onChange={(e) => setJoinTierListId(e.target.value)}
+								placeholder='Tierlist ID'
+								className='flex-grow'
+							/>
+							<span> Join New Tierlist</span>
+							<Button onClick={joinTierListOnClick} variant='outline'>
+								Join Tierlist
+							</Button>
+						</div>
+						<div>
+							<div className='flex'>
+								{userTierLists.length == 0 ? (
+									<p className='text-gray-500 italic mt-4'>
+										No tierlists found. Create one to get started!
+									</p>
+								) : (
+									<div>
+										{userCreatedTierLists.map((tierList: TierList) => (
+											<TierListItemCard key={tierList.id} tierList={tierList} />
+										))}
+										{otherTierLists.map((tierList: TierList) => (
+											<TierListItemCard key={tierList.id} tierList={tierList} />
+										))}
+									</div>
+								)}
+							</div>
 						</div>
 					</div>
 				</div>

@@ -55,8 +55,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 				await addUser(user.uid, user.displayName ?? 'Guest User', db);
 			}
 			setUser(user);
-			console.log('User signed up:', user.email);
-			console.log(user);
 		} catch (error: unknown) {
 			if (error instanceof Error) {
 				const errorMessage = error.message;

@@ -6,9 +6,10 @@ import { TierListItemModel } from '../model/TierListItem';
 import {
 	addTierList,
 	getTierList,
-	updateUserTierList,
 	updateTierList,
 	getUserIdsToNamesMap,
+	FirebaseReturnStatus,
+	joinTierList,
 } from '../firebase/firebase_utils';
 import { TierList, TierListRankings } from '../model/TierList';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
@@ -75,16 +76,17 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				setEditorIds([user.uid]);
 				setEditorNames(await getUserIdsToNamesMap(new Set([user.uid]), db));
 			} else if (mode === TierListEditorMode.Edit && listId) {
-				const tierListDoc = await getTierList(listId, db);
-				if (tierListDoc) {
-					setListName(tierListDoc.name);
-					setListDescription(tierListDoc.description);
-					setItems(tierListDoc.items);
-					setTiers(tierListDoc.tiers);
-					setCreatorId(tierListDoc.creatorId);
-					setEditorIds(Array.from(tierListDoc.editorIds));
-					setEditorNames(await getUserIdsToNamesMap(tierListDoc.editorIds, db));
+				const tierList = await getTierList(listId, db);
+				if (tierList === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
+					return;
 				}
+				setListName(tierList.name);
+				setListDescription(tierList.description);
+				setItems(tierList.items);
+				setTiers(tierList.tiers);
+				setCreatorId(tierList.creatorId);
+				setEditorIds(Array.from(tierList.editorIds));
+				setEditorNames(await getUserIdsToNamesMap(tierList.editorIds, db));
 			} else {
 				throw Error('Unexpected error / tier list editor mode.');
 			}
@@ -183,7 +185,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				// Create a new tier list
 				newTierList = await addTierList(newTierList, db);
 				const newTierListId = newTierList.id;
-				await updateUserTierList(newTierListId, user.uid, db);
+				await joinTierList(newTierListId, user.uid, db);
 				setMessage('Tier list saved successfully!');
 				setIsSaving(false);
 				setListId(newTierListId);

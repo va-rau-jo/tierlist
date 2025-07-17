@@ -15,15 +15,20 @@ import { Tier, UNASSIGNED_TIER } from '../model/Tier';
 import { TierListItemModel } from '../model/TierListItem';
 import { User } from 'firebase/auth';
 
+export const enum FirebaseReturnStatus {
+	OK,
+	TIERLIST_NOT_FOUND_ERROR,
+	ALREADY_JOINED_TIERLIST_ERROR,
+	USER_ALREADY_EXISTS_ERROR,
+}
+
 export const shouldRedirectToLogin = (
 	user: User | null,
 	db: ReturnType<typeof getFirestore> | null,
 	isLoading: boolean | null
-) => {
+): boolean => {
 	// Firebase done loading, and still no user or DB
-	if (!isLoading && (!user || !db)) {
-		return true;
-	}
+	return !isLoading && (!user || !db);
 };
 
 export const addTierList = async (newTierList: TierList, db: ReturnType<typeof getFirestore>) => {
@@ -38,7 +43,7 @@ export const addTierList = async (newTierList: TierList, db: ReturnType<typeof g
 	newTierList.id = newTierListDocRef.id;
 	const tierListObj = newTierList.toFirebaseObject();
 	await setDoc(newTierListDocRef, tierListObj);
-	await updateEditorUserTierLists(newTierList.editorIds, newTierList.id, db);
+	await updateEditorUserTierLists(newTierList.id, newTierList.editorIds, db);
 	return newTierList;
 };
 
@@ -46,7 +51,7 @@ export const updateTierList = async (
 	existingTierListId: string,
 	newTierList: TierList,
 	db: ReturnType<typeof getFirestore>
-) => {
+): Promise<FirebaseReturnStatus> => {
 	/**
 	 * Updates an existing TierList object in Firebase.
 	 * @param existingTierListId - ID of the TierList to update.
@@ -73,7 +78,8 @@ export const updateTierList = async (
 	};
 
 	await updateDoc(tierListRef, { ...updateFields });
-	await updateEditorUserTierLists(newTierList.editorIds, existingTierListId, db);
+	await updateEditorUserTierLists(existingTierListId, newTierList.editorIds, db);
+	return FirebaseReturnStatus.OK;
 };
 
 export const getTierList = async (tierListId: string, db: ReturnType<typeof getFirestore>) => {
@@ -81,45 +87,61 @@ export const getTierList = async (tierListId: string, db: ReturnType<typeof getF
 	 * Loads a tier list from Firebase.
 	 * @param tierListId - The ID of the tier list to load.
 	 * @param db - The Firebase database object.
-	 * @returns A Promise of a TierList object. Returns null if there was an error.
+	 * @returns A Promise of a TierList object. Returns null if there was an
+	 * error.
 	 */
 	const tierListRef = doc(db, 'tierlist', tierListId);
 	const tierListDoc = await getDoc(tierListRef);
 	if (tierListDoc.exists()) {
 		return TierList.fromFirebase(tierListDoc.data());
-	} else {
-		return null;
 	}
+	return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
+};
+
+export const joinTierList = async (
+	tierListId: string,
+	userId: string,
+	db: ReturnType<typeof getFirestore>
+): Promise<FirebaseReturnStatus> => {
+	/**
+	 * Adds a tier list to the current user's list of tier lists.
+	 * @param tierListId - The ID of the tier list to join.
+	 * @param uyserId - The ID of the usrer.
+	 * @param db - The Firebase database object.
+	 */
+	const userTierListsCollectionRef = collection(db, `users/${userId}/tierlists`);
+
+	// Check if the tierlist already exists in user's collection
+	const existingTierListDocs = await getDocs(
+		query(userTierListsCollectionRef, where('tierListId', '==', tierListId))
+	);
+
+	// Only add if it doesn't exist yet
+	if (existingTierListDocs.empty) {
+		await setDoc(doc(userTierListsCollectionRef), {
+			tierListId: tierListId,
+			joinedAt: serverTimestamp(),
+		});
+		return FirebaseReturnStatus.OK;
+	}
+	return FirebaseReturnStatus.ALREADY_JOINED_TIERLIST_ERROR;
 };
 
 const updateEditorUserTierLists = async (
-	editorIds: Set<string>,
 	tierListId: string,
+	editorIds: Set<string>,
 	db: ReturnType<typeof getFirestore>
-) => {
+): Promise<FirebaseReturnStatus> => {
 	/**
 	 * Updates the user profiles of all editors to include the new tier list.
-	 * This function adds the tier list ID to each editor's list of tier lists in their user profile.
+	 * This function adds the tier list ID to each editor's list of tier lists in
+	 * their user profile.
 	 */
 	// Remove duplicates
 	for (const editorId of editorIds) {
-		const userTierListsCollectionRef = collection(db, `users/${editorId}/tierlists`);
-
-		// Check if the tierlist already exists in user's collection
-		const existingTierListQuery = query(
-			userTierListsCollectionRef,
-			where('tierListId', '==', tierListId)
-		);
-		const existingTierListDocs = await getDocs(existingTierListQuery);
-
-		// Only add if it doesn't exist yet
-		if (existingTierListDocs.empty) {
-			await setDoc(doc(userTierListsCollectionRef), {
-				tierListId: tierListId,
-				joinedAt: serverTimestamp(),
-			});
-		}
+		await joinTierList(tierListId, editorId, db);
 	}
+	return FirebaseReturnStatus.OK;
 };
 
 export const updateTierListRankings = async (
@@ -127,7 +149,7 @@ export const updateTierListRankings = async (
 	userId: string,
 	rankings: TierListRankings,
 	db: ReturnType<typeof getFirestore>
-) => {
+): Promise<FirebaseReturnStatus> => {
 	/**
 	 * Update the rankings of a tier list in Firebase.
 	 * @param tierListId - The ID of the tier list to update.
@@ -137,33 +159,32 @@ export const updateTierListRankings = async (
 	const tierListRef = doc(db, 'tierlist', tierListId);
 	const tierListDoc = await getDoc(tierListRef);
 
-	if (tierListDoc.exists()) {
-		// Tier list should exist.
-		const currentRankings = tierListDoc.data().rankings || {};
-
-		// Skip unassigned items
-		const firebaseCompatibleRanking = Object.fromEntries(
-			new Map(
-				Array.from(rankings.entries())
-					.filter(([tierId]) => tierId !== UNASSIGNED_TIER)
-					.map(([tierId, items]) => [tierId, items.map((item) => item.id)])
-			)
-		);
-		console.log(firebaseCompatibleRanking);
-
-		const updatedRankings = {
-			...currentRankings,
-			[userId]: firebaseCompatibleRanking,
-		};
-		await updateDoc(tierListRef, { rankings: updatedRankings });
+	if (!tierListDoc.exists()) {
+		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
 	}
+
+	const currentRankings = tierListDoc.data().rankings || {};
+	// Skip unassigned items
+	const firebaseCompatibleRanking = Object.fromEntries(
+		new Map(
+			Array.from(rankings.entries())
+				.filter(([tierId]) => tierId !== UNASSIGNED_TIER)
+				.map(([tierId, items]) => [tierId, items.map((item) => item.id)])
+		)
+	);
+	const updatedRankings = {
+		...currentRankings,
+		[userId]: firebaseCompatibleRanking,
+	};
+	await updateDoc(tierListRef, { rankings: updatedRankings });
+	return FirebaseReturnStatus.OK;
 };
 
 export const addUser = async (
 	userId: string,
 	name: string,
 	db: ReturnType<typeof getFirestore>
-) => {
+): Promise<FirebaseReturnStatus> => {
 	/**
 	 * Add user to the DB. Skips the operation if they have been added already.
 	 * @param userId - The ID of the user.
@@ -173,40 +194,23 @@ export const addUser = async (
 	const usersRef = doc(db, 'users', userId);
 	const userDoc = await getDoc(usersRef);
 
-	if (!userDoc.exists()) {
-		await setDoc(usersRef, {
-			userId: userId,
-			name: name,
-			createdAt: serverTimestamp(),
-		});
-	} else {
+	if (userDoc.exists()) {
 		console.log('User already added.');
+		return FirebaseReturnStatus.USER_ALREADY_EXISTS_ERROR;
 	}
+
+	await setDoc(usersRef, {
+		userId: userId,
+		name: name,
+		createdAt: serverTimestamp(),
+	});
+	return FirebaseReturnStatus.OK;
 };
 
-export const updateUserTierList = async (
-	tierListId: string,
+export const getUserTierLists = async (
 	userId: string,
 	db: ReturnType<typeof getFirestore>
-) => {
-	/**
-	 * Updates the user's tier list with the given tier list ID.
-	 * @param tierListId - The ID of the tier list to join.
-	 * @param userId - The ID of the user.
-	 * @param db - The Firebase database object.
-	 */
-	const userTierListRef = doc(db, `users/${userId}/tierlists`, tierListId);
-	const existingDoc = await getDoc(userTierListRef);
-
-	if (!existingDoc.exists()) {
-		await setDoc(userTierListRef, {
-			tierListId: tierListId,
-			joinedAt: serverTimestamp(),
-		});
-	}
-};
-
-export const getUserTierLists = async (userId: string, db: ReturnType<typeof getFirestore>) => {
+): Promise<TierList[]> => {
 	/**
 	 * Loads all tier lists associated with a user from Firebase.
 	 * @param userId - The ID of the user whose tier lists should be loaded.
@@ -235,18 +239,18 @@ export const getUserTierLists = async (userId: string, db: ReturnType<typeof get
 export const getUserIdsToNamesMap = async (
 	userIdsSet: Set<string>,
 	db: ReturnType<typeof getFirestore>
-) => {
+): Promise<Map<string, string>> => {
 	/**
 	 * Loads a map of user IDs to names from Firebase.
 	 * @param userIdsSet - The IDs of the users whose names should be loaded.
 	 * @param db - The Firebase database object.
 	 * @returns A Promise of a Map of user IDs to names.
 	 */
-	const userIds = Array.from(userIdsSet);
-	console.log(userIds);
+	if (userIdsSet.size === 0) {
+		return new Map<string, string>();
+	}
 	const userRef = collection(db, 'users');
-	const userQuery = query(userRef, where('userId', 'in', userIds));
-	const userDocs = await getDocs(userQuery);
+	const userDocs = await getDocs(query(userRef, where('userId', 'in', Array.from(userIdsSet))));
 	const userIdToNameMap = new Map<string, string>();
 	userDocs.forEach((doc) => {
 		userIdToNameMap.set(doc.data().userId, doc.data().name);
