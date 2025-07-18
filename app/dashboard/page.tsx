@@ -53,11 +53,13 @@ const DashboardPage: React.FC = () => {
 	);
 
 	const joinTierListOnClick = () => {
-		joinTierList(joinTierListId, user.uid, db).then(() =>
-			getUserTierLists(user.uid, db).then((tierLists) => {
-				setUserTierLists(tierLists);
-			})
-		);
+		joinTierList(joinTierListId, user.uid, db).then(refreshTierLists);
+	};
+
+	const refreshTierLists = () => {
+		getUserTierLists(user.uid, db).then((tierLists) => {
+			setUserTierLists(tierLists);
+		});
 	};
 
 	return (
@@ -73,32 +75,55 @@ const DashboardPage: React.FC = () => {
 					<div className='flex flex-col w-full mx-16 mt-8 items-center'>
 						<h1> Your Tierlists</h1>
 						<div>
-							<Input
-								label=''
-								id={'join'}
-								value={joinTierListId}
-								onChange={(e) => setJoinTierListId(e.target.value)}
-								placeholder='Tierlist ID'
-								className='flex-grow'
-							/>
-							<span> Join New Tierlist</span>
-							<Button onClick={joinTierListOnClick} variant='outline'>
-								Join Tierlist
-							</Button>
-						</div>
-						<div>
+							<div>
+								<div className='relative bg-white/50 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden w-full'>
+									<div className='px-4 py-2 sm:px-8 sm:py-2 cursor-pointer'>
+										{/* Tierlist Title */}
+										<h3 className='text-3xl text-center font-bold text-gray-900 dark:text-white mb-2 line-clamp-2'>
+											Join Tier List
+										</h3>
+
+										<section className='flex justify-around'>
+											{/* Actions like View, Edit, Share */}
+											<div className='my-auto relative z-10'>
+												<div className='px-4 py-1 flex justify-center space-x-8'></div>
+												<Input
+													label=''
+													id={'join'}
+													value={joinTierListId}
+													onChange={(e) => setJoinTierListId(e.target.value)}
+													placeholder='Tierlist ID'
+													className='flex-grow'
+												/>
+												<span> Join New Tierlist</span>
+												<Button onClick={joinTierListOnClick} variant='outline'>
+													Join Tierlist
+												</Button>
+											</div>
+										</section>
+									</div>
+								</div>
+							</div>
 							<div className='flex'>
 								{userTierLists.length == 0 ? (
 									<p className='text-gray-500 italic mt-4'>
 										No tierlists found. Create one to get started!
 									</p>
 								) : (
-									<div>
+									<div className='space-y-2'>
 										{userCreatedTierLists.map((tierList: TierList) => (
-											<TierListItemCard key={tierList.id} tierList={tierList} />
+											<TierListItemCard
+												key={tierList.id}
+												tierList={tierList}
+												refreshCallback={refreshTierLists}
+											/>
 										))}
 										{otherTierLists.map((tierList: TierList) => (
-											<TierListItemCard key={tierList.id} tierList={tierList} />
+											<TierListItemCard
+												key={tierList.id}
+												tierList={tierList}
+												refreshCallback={refreshTierLists}
+											/>
 										))}
 									</div>
 								)}

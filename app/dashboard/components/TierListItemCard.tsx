@@ -5,18 +5,27 @@ import { TierList } from '../../model/TierList';
 import { ActionButton } from '../../components/Button';
 import Link from 'next/link';
 import { getInitials } from '../../utils';
+import { useFirebase } from '@/app/firebase/FirebaseProvider';
+import { deleteTierList, leaveTierList } from '@/app/firebase/firebase_utils';
+
+const truncateDescription = (text: string, maxLength: number) => {
+	if (text.length > maxLength) {
+		return text.substring(0, maxLength) + '...';
+	}
+	return text;
+};
 
 interface TierListItemCardProps {
 	tierList: TierList;
+	refreshCallback: () => void;
 }
 
-const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList }) => {
-	const truncateDescription = (text: string, maxLength: number) => {
-		if (text.length > maxLength) {
-			return text.substring(0, maxLength) + '...';
-		}
-		return text;
-	};
+const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCallback }) => {
+	const { db, user } = useFirebase();
+
+	if (!db || !user) {
+		return;
+	}
 
 	const lastUpdateDate = tierList.lastUpdatedAt.toDate().toLocaleDateString('en-US', {
 		year: 'numeric',
@@ -65,14 +74,16 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList }) => {
 					{/* Actions like View, Edit, Share */}
 					<div className='my-auto relative z-10'>
 						<div className='px-4 py-1 flex justify-center space-x-8'>
-							<Link href={`/dashboard/edit/${tierList.id}`}>
-								<ActionButton
-									variant='outline'
-									className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium py-0'
-								>
-									Edit
-								</ActionButton>
-							</Link>
+							{tierList.editorIds.has(user.uid) && (
+								<Link href={`/dashboard/edit/${tierList.id}`}>
+									<ActionButton
+										variant='outline'
+										className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium py-0'
+									>
+										Edit
+									</ActionButton>
+								</Link>
+							)}
 							<ActionButton
 								onClick={() => {}}
 								variant='outline'
@@ -80,6 +91,33 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList }) => {
 							>
 								Share
 							</ActionButton>
+							{tierList.creatorId === user.uid ? (
+								<ActionButton
+									onClick={() => {
+										deleteTierList(tierList.id, db);
+										setTimeout(() => {
+											refreshCallback();
+										}, 1000);
+									}}
+									variant='outline'
+									className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium'
+								>
+									Delete
+								</ActionButton>
+							) : (
+								<ActionButton
+									onClick={() => {
+										leaveTierList(tierList.id, user.uid, db);
+										setTimeout(() => {
+											refreshCallback();
+										}, 1000);
+									}}
+									variant='outline'
+									className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium'
+								>
+									Leave
+								</ActionButton>
+							)}
 						</div>
 					</div>
 				</section>

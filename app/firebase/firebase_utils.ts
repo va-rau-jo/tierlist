@@ -8,6 +8,7 @@ import {
 	getDoc,
 	setDoc,
 	updateDoc,
+	deleteDoc,
 } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { TierList, TierListRankings } from '../model/TierList';
@@ -106,25 +107,73 @@ export const joinTierList = async (
 	/**
 	 * Adds a tier list to the current user's list of tier lists.
 	 * @param tierListId - The ID of the tier list to join.
-	 * @param uyserId - The ID of the usrer.
+	 * @param userId - The ID of the usrer.
 	 * @param db - The Firebase database object.
 	 */
-	const userTierListsCollectionRef = collection(db, `users/${userId}/tierlists`);
-
-	// Check if the tierlist already exists in user's collection
-	const existingTierListDocs = await getDocs(
-		query(userTierListsCollectionRef, where('tierListId', '==', tierListId))
-	);
+	const tierListRef = doc(db, `users/${userId}/tierlists`, tierListId);
+	const tierListSnap = await getDoc(tierListRef);
 
 	// Only add if it doesn't exist yet
-	if (existingTierListDocs.empty) {
-		await setDoc(doc(userTierListsCollectionRef), {
+	if (!tierListSnap.exists()) {
+		await setDoc(tierListRef, {
 			tierListId: tierListId,
 			joinedAt: serverTimestamp(),
 		});
 		return FirebaseReturnStatus.OK;
 	}
 	return FirebaseReturnStatus.ALREADY_JOINED_TIERLIST_ERROR;
+};
+
+export const leaveTierList = async (
+	tierListId: string,
+	userId: string,
+	db: ReturnType<typeof getFirestore>
+): Promise<FirebaseReturnStatus> => {
+	/**
+	 * Removes a tier list from the user's list of tier lists.
+	 * @param tierListId - The ID of the tier list to leave.
+	 * @param userId - The ID of the user.
+	 * @param db - The Firebase database object.
+	 */
+	try {
+		const userTierListDoc = doc(db, `users/${userId}/tierlists`, tierListId);
+		await deleteDoc(userTierListDoc);
+		return FirebaseReturnStatus.OK;
+	} catch {
+		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
+	}
+};
+
+export const deleteTierList = async (
+	tierListId: string,
+	db: ReturnType<typeof getFirestore>
+): Promise<FirebaseReturnStatus> => {
+	/**
+	 * Deletes a tier list and removes it from all users tierlist lists
+	 * @param tierListId - The ID of the tier list to delete
+	 * @param db - The Firebase database object
+	 */
+
+	try {
+		// Get all users
+		const userDocs = await getDocs(collection(db, 'users'));
+
+		// Delete tierlist reference from each user's tierlists collection
+		const deletionPromises = userDocs.docs.map(async (userDoc) => {
+			const userTierListsRef = collection(db, `users/${userDoc.id}/tierlists`);
+			const userTierListQuery = query(userTierListsRef, where('tierListId', '==', tierListId));
+			const userTierListDocs = await getDocs(userTierListQuery);
+
+			return Promise.all(userTierListDocs.docs.map((doc) => setDoc(doc.ref, {}, { merge: true })));
+		});
+		// Wait for all user updates to complete
+		await Promise.all(deletionPromises);
+		// Finally delete the actual tierlist document
+		await deleteDoc(doc(db, 'tierlist', tierListId));
+		return FirebaseReturnStatus.OK;
+	} catch {
+		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
+	}
 };
 
 const updateEditorUserTierLists = async (

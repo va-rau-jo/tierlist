@@ -195,15 +195,13 @@ const RankPage: React.FC = () => {
 		setMessage('Rankings saved successfully!');
 	};
 
-	const isEditor = tierList.creatorId === user.uid || tierList.editorIds.has(user.uid);
-
 	const header = (
 		<>
 			<h2 className='text-3xl font-bold mb-2 text-center'>Rank {tierList.name}</h2>
 			<div className='flex justify-center space-x-8 text-lg py-2'>
 				<span> Description: {tierList.description} </span>
 				<span> Tier List Id: {tierListId} </span>
-				{isEditor && (
+				{tierList.editorIds.has(user.uid) && (
 					<Link href={`/dashboard/edit/${tierListId}`}>
 						<ActionButton
 							variant='outline'

@@ -9,7 +9,6 @@ import {
 	updateTierList,
 	getUserIdsToNamesMap,
 	FirebaseReturnStatus,
-	joinTierList,
 } from '../firebase/firebase_utils';
 import { TierList, TierListRankings } from '../model/TierList';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
@@ -184,11 +183,9 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			} else {
 				// Create a new tier list
 				newTierList = await addTierList(newTierList, db);
-				const newTierListId = newTierList.id;
-				await joinTierList(newTierListId, user.uid, db);
 				setMessage('Tier list saved successfully!');
 				setIsSaving(false);
-				setListId(newTierListId);
+				setListId(newTierList.id);
 			}
 		} catch (error: unknown) {
 			console.error('Error saving tier list:', error);
