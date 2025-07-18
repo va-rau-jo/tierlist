@@ -113,6 +113,13 @@ export const joinTierList = async (
 	const tierListRef = doc(db, `users/${userId}/tierlists`, tierListId);
 	const tierListSnap = await getDoc(tierListRef);
 
+	// Check if the tierlist exists first
+	const tierListDocRef = doc(db, 'tierlist', tierListId);
+	const tierListDocSnap = await getDoc(tierListDocRef);
+	if (!tierListDocSnap.exists()) {
+		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
+	}
+
 	// Only add if it doesn't exist yet
 	if (!tierListSnap.exists()) {
 		await setDoc(tierListRef, {

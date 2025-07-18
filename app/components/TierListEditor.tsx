@@ -1,5 +1,5 @@
 import { SetStateAction, useEffect, useState } from 'react';
-import { Button } from './Button';
+import { ActionButton, Button } from './Button';
 import { Input } from './Input';
 import { useFirebase } from '../firebase/FirebaseProvider';
 import { TierListItemModel } from '../model/TierListItem';
@@ -15,6 +15,7 @@ import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Tier } from '../model/Tier';
 import { generateUniqueId } from '../utils';
 import { TIER_ITEM_HEIGHT } from '../constants';
+import PopupMessage from './PopupMessage';
 
 enum TierListEditorMode {
 	Create,
@@ -63,6 +64,8 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const [creatorId, setCreatorId] = useState(user?.uid);
 	const [editorIds, setEditorIds] = useState<string[]>([]);
 	const [editorNames, setEditorNames] = useState<Map<string, string>>(new Map<string, string>());
+	const [popupError, setPopupError] = useState('');
+	const [popupMessage, setPopupMessage] = useState('');
 
 	useEffect(() => {
 		if (isLoading || !user || !db) {
@@ -142,57 +145,50 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	// Save the tier list to Firestore
 	const saveTierListOnClick = async () => {
 		if (!listName.trim()) {
-			setMessage('Please fill in the list name.');
+			setPopupError('Please give the tier list a name.');
 			return;
 		}
 		if (items.some((item: TierListItemModel) => !item.value.trim())) {
-			setMessage('Please ensure all items have a value or image URL.');
+			setPopupError('Please give all items a description or image URL.');
 			return;
 		}
 		if (tiers.some((tier) => !tier.name.trim())) {
-			setMessage('Please ensure all tiers have a name.');
-			return;
-		}
-		if (items.length === 0) {
-			setMessage('Add at least one item.');
+			setPopupError('Please give all tiers a name.');
 			return;
 		}
 
 		setIsSaving(true);
-		setMessage('');
 
-		try {
-			let newTierList = new TierList(
-				user.uid,
-				user.displayName || '',
-				new Set(editorIds),
-				serverTimestamp() as Timestamp,
-				serverTimestamp() as Timestamp,
-				listName,
-				listDescription,
-				tiers,
-				items,
-				new Map<string, TierListRankings>()
-			);
-			if (listId) {
-				// We already created a tier list, update the updateable fields.
-				await updateTierList(listId, newTierList, db);
-				setMessage('Tier list updated successfully!');
-				setIsSaving(false);
-				return;
-			} else {
-				// Create a new tier list
-				newTierList = await addTierList(newTierList, db);
-				setMessage('Tier list saved successfully!');
+		let newTierList = new TierList(
+			user.uid,
+			user.displayName || '',
+			new Set(editorIds),
+			serverTimestamp() as Timestamp,
+			serverTimestamp() as Timestamp,
+			listName,
+			listDescription,
+			tiers,
+			items,
+			new Map<string, TierListRankings>()
+		);
+		if (listId) {
+			// We already created a tier list, update the updateable fields.
+			updateTierList(listId, newTierList, db).then((status) => {
+				if (status !== FirebaseReturnStatus.OK) {
+					setPopupError('Error occurred updating the tierlist: ' + status);
+				} else {
+					setPopupMessage('Tier list updated successfully!');
+					setIsSaving(false);
+				}
+			});
+		} else {
+			// Create a new tier list, update Firebase set fields like tierlist id.
+			addTierList(newTierList, db).then((returnedTierList) => {
+				newTierList = returnedTierList;
+				setPopupMessage('Tier list saved successfully!');
 				setIsSaving(false);
 				setListId(newTierList.id);
-			}
-		} catch (error: unknown) {
-			console.error('Error saving tier list:', error);
-			if (error instanceof Error) {
-				setMessage(`Error saving tier list: ${error.message}`);
-			}
-			setIsSaving(false);
+			});
 		}
 	};
 
@@ -206,16 +202,16 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		});
 	};
 
-	console.log(editorNames);
-
 	const addEditorsDiv = (
 		<div className='flex flex-col bg-gray-50 rounded-lg border border-gray-200 mb-2'>
 			<h2 className='text-center text-xl'>Add Editors</h2>
 			<div className='flex flex-col space-y-2 p-4'>
-				{editorIds.map((user, index) => (
+				{editorIds.map((userId, index) => (
 					<div key={index} className='flex items-center gap-2'>
 						<i
-							className='fas fa-trash trashcan-icon cursor-pointer'
+							className={`fas fa-trash trashcan-icon cursor-pointer ${
+								index === 0 ? 'invisible' : ''
+							}`}
 							onClick={() => {
 								const newEditorIds = editorIds.filter((_, i) => i !== index);
 								setEditorIds(newEditorIds);
@@ -224,22 +220,23 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 						<Input
 							label=''
 							id={`user-${index}`}
-							value={user}
+							value={userId}
 							onChange={(e) => handleEditorIdsChange(e, index)}
 							placeholder="Enter the user's ID"
-							className='flex-grow'
+							additionalClassNames='flex-grow'
+							disabled={index === 0}
 						/>
 						{editorNames.has(editorIds[index]) ? (
 							<span className='text-green-600'> {editorNames.get(editorIds[index])} </span>
-						) : (
-							<span> User Not Found </span>
-						)}
+						) : editorIds[index] ? (
+							<span className='text-red-500'> User Not Found </span>
+						) : null}
 					</div>
 				))}
 				<div className='flex justify-center'>
-					<Button variant='primary' onClick={() => setEditorIds([...editorIds, ''])}>
-						Add User
-					</Button>
+					<ActionButton variant='outline' onClick={() => setEditorIds([...editorIds, ''])}>
+						Add New Editor
+					</ActionButton>
 				</div>
 			</div>
 		</div>
@@ -266,7 +263,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 							handleCurrentItemChange('value', e.target.value)
 						}
 						placeholder='Item Name'
-						className='flex-grow'
+						additionalClassNames='flex-grow'
 					/>
 				) : (
 					<Input
@@ -277,12 +274,12 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 							handleCurrentItemChange('imageUrl', e.target.value)
 						}
 						placeholder='Image URL'
-						className='flex-grow'
+						additionalClassNames='flex-grow'
 					/>
 				)}
-				<Button variant='primary' onClick={handleAddItem} className='px-8'>
-					Add
-				</Button>
+				<ActionButton variant='outline' onClick={handleAddItem} className='px-6'>
+					Add Item
+				</ActionButton>
 			</div>
 		</div>
 	);
@@ -309,7 +306,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					value={listId}
 					placeholder=''
 					disabled={true}
-					className='mb-2'
+					additionalClassNames='mb-2'
 				/>
 			)}
 			<Input
@@ -319,7 +316,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				onChange={(e: { target: { value: SetStateAction<string> } }) => setListName(e.target.value)}
 				placeholder='e.g., Favorite Video Games'
 				disabled={!isCreator}
-				className='mb-2'
+				additionalClassNames='mb-2'
 			/>
 			<Input
 				label='Description'
@@ -330,7 +327,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				}
 				placeholder='A brief description of your tier list.'
 				disabled={!isCreator}
-				className='mb-2'
+				additionalClassNames='mb-2'
 			/>
 			{addEditorsDiv}
 			{addItemDiv}
@@ -398,11 +395,16 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			<Button variant='secondary' onClick={handleAddTier} className='mt-6 w-full'>
 				Add Tier
 			</Button>
-			<div className='flex flex-col sm:flex-row justify-center gap-4 mt-8'>
+			<div className='fixed flex justify-center bottom-4 right-8'>
 				<Button onClick={saveTierListOnClick} disabled={isSaving}>
 					{isSaving ? 'Saving...' : 'Save Tier List'}
 				</Button>
 			</div>
+			{popupError ? (
+				<PopupMessage message={popupError} type='error' onClose={() => setPopupError('')} />
+			) : popupMessage ? (
+				<PopupMessage message={popupMessage} type='success' onClose={() => setPopupMessage('')} />
+			) : null}
 		</div>
 	);
 };

@@ -20,6 +20,11 @@ interface TierListItemCardProps {
 	refreshCallback: () => void;
 }
 
+// Displays the create and join actions at the top of the page.
+const ActionButtonContainer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+	return <div className='z-10'>{children}</div>;
+};
+
 const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCallback }) => {
 	const { db, user } = useFirebase();
 
@@ -54,11 +59,11 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 					</p>
 				</div>
 				<section className='flex justify-around'>
-					<div className='flex items-center mb-2 space-x-4'>
+					<div className='flex items-center mb-2 space-x-4 w-full'>
 						<div className='flex items-center justify-center h-14 w-14 bg-red-500'>
 							<span className='text-white font-bold text-2xl tracking-widest'>{initials}</span>
 						</div>
-						<div className='text-xl'>
+						<div className='text-lg'>
 							<p className='text-gray-600 dark:text-gray-400'>
 								Created by{' '}
 								<span className='font-semibold text-blue-600 dark:text-blue-400'>
@@ -66,31 +71,26 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 								</span>
 							</p>
 							<p className='text-gray-600 dark:text-gray-400'>
-								Last Updated:
+								Last Updated:{' '}
 								<span className='font-semibold dark:text-blue-400'>{lastUpdateDate}</span>
 							</p>
 						</div>
 					</div>
 					{/* Actions like View, Edit, Share */}
-					<div className='my-auto relative z-10'>
-						<div className='px-4 py-1 flex justify-center space-x-8'>
-							{tierList.editorIds.has(user.uid) && (
+					<div className='flex my-auto w-full pl-4 py-1 justify-center space-x-4'>
+						{tierList.editorIds.has(user.uid) && (
+							<ActionButtonContainer>
 								<Link href={`/dashboard/edit/${tierList.id}`}>
-									<ActionButton
-										variant='outline'
-										className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium py-0'
-									>
-										Edit
-									</ActionButton>
+									<ActionButton variant='outline'>Edit</ActionButton>
 								</Link>
-							)}
-							<ActionButton
-								onClick={() => {}}
-								variant='outline'
-								className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium'
-							>
+							</ActionButtonContainer>
+						)}
+						<ActionButtonContainer>
+							<ActionButton onClick={() => {}} variant='outline'>
 								Share
 							</ActionButton>
+						</ActionButtonContainer>
+						<ActionButtonContainer>
 							{tierList.creatorId === user.uid ? (
 								<ActionButton
 									onClick={() => {
@@ -100,7 +100,6 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 										}, 1000);
 									}}
 									variant='outline'
-									className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium'
 								>
 									Delete
 								</ActionButton>
@@ -113,12 +112,11 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 										}, 1000);
 									}}
 									variant='outline'
-									className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium'
 								>
 									Leave
 								</ActionButton>
 							)}
-						</div>
+						</ActionButtonContainer>
 					</div>
 				</section>
 			</div>

@@ -3,19 +3,35 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '../firebase/FirebaseProvider';
-import { Button } from '../components/Button';
-import { getUserTierLists, joinTierList, shouldRedirectToLogin } from '../firebase/firebase_utils';
+import { ActionButton } from '../components/Button';
+import {
+	FirebaseReturnStatus,
+	getUserTierLists,
+	joinTierList,
+	shouldRedirectToLogin,
+} from '../firebase/firebase_utils';
 import { TierList } from '../model/TierList';
 import TierListItemCard from './components/TierListItemCard';
 import NavBar from '../components/NavBar';
 import Link from 'next/link';
 import { Input } from '../components/Input';
+import PopupMessage from '../components/PopupMessage';
+
+// Displays the create and join actions at the top of the page.
+const ActionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+	return (
+		<div className='flex flex-1 flex-col justify-center items-center rounded-lg border border-dashed border-black/25 w-full h-full space-y-2 pt-2 pb-4'>
+			{children}
+		</div>
+	);
+};
 
 const DashboardPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
 	const router = useRouter();
 	const [userTierLists, setUserTierLists] = React.useState<TierList[]>([]);
-	const [joinTierListId, setJoinTierListId] = React.useState<string>('');
+	const [joinTierListId, setJoinTierListId] = React.useState('');
+	const [popupError, setPopupError] = React.useState('');
 	const [isLoadingTierLists, setIsLoadingTierLists] = React.useState(true);
 
 	useEffect(() => {
@@ -53,7 +69,20 @@ const DashboardPage: React.FC = () => {
 	);
 
 	const joinTierListOnClick = () => {
-		joinTierList(joinTierListId, user.uid, db).then(refreshTierLists);
+		if (joinTierListId) {
+			joinTierList(joinTierListId, user.uid, db).then((status) => {
+				if (status === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
+					setPopupError(`Tierlist ${joinTierListId} was not found.`);
+				} else if (status === FirebaseReturnStatus.ALREADY_JOINED_TIERLIST_ERROR) {
+					const tierlistName = userTierLists.find((t) => t.id === joinTierListId)?.name;
+					setPopupError(`You have already joined tierlist ${tierlistName}.`);
+				} else {
+					refreshTierLists();
+				}
+			});
+		} else {
+			setPopupError('Tierlist ID cannot be empty.');
+		}
 	};
 
 	const refreshTierLists = () => {
@@ -65,73 +94,62 @@ const DashboardPage: React.FC = () => {
 	return (
 		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200 flex flex-col'>
 			<NavBar />
-			<div className=' flex justify-center items-center flex-1 flex-col'>
-				<div className='flex h-fit space-x-2'>
-					<Link href={'/dashboard/create'}>
-						<Button variant='outline'>Create New Tierlist</Button>
-					</Link>
-				</div>
-				<div className='flex flex-1 justify-center w-full'>
-					<div className='flex flex-col w-full mx-16 mt-8 items-center'>
-						<h1> Your Tierlists</h1>
-						<div>
-							<div>
-								<div className='relative bg-white/50 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden w-full'>
-									<div className='px-4 py-2 sm:px-8 sm:py-2 cursor-pointer'>
-										{/* Tierlist Title */}
-										<h3 className='text-3xl text-center font-bold text-gray-900 dark:text-white mb-2 line-clamp-2'>
-											Join Tier List
-										</h3>
-
-										<section className='flex justify-around'>
-											{/* Actions like View, Edit, Share */}
-											<div className='my-auto relative z-10'>
-												<div className='px-4 py-1 flex justify-center space-x-8'></div>
-												<Input
-													label=''
-													id={'join'}
-													value={joinTierListId}
-													onChange={(e) => setJoinTierListId(e.target.value)}
-													placeholder='Tierlist ID'
-													className='flex-grow'
-												/>
-												<span> Join New Tierlist</span>
-												<Button onClick={joinTierListOnClick} variant='outline'>
-													Join Tierlist
-												</Button>
-											</div>
-										</section>
-									</div>
-								</div>
-							</div>
-							<div className='flex'>
-								{userTierLists.length == 0 ? (
-									<p className='text-gray-500 italic mt-4'>
-										No tierlists found. Create one to get started!
-									</p>
-								) : (
-									<div className='space-y-2'>
-										{userCreatedTierLists.map((tierList: TierList) => (
-											<TierListItemCard
-												key={tierList.id}
-												tierList={tierList}
-												refreshCallback={refreshTierLists}
-											/>
-										))}
-										{otherTierLists.map((tierList: TierList) => (
-											<TierListItemCard
-												key={tierList.id}
-												tierList={tierList}
-												refreshCallback={refreshTierLists}
-											/>
-										))}
-									</div>
-								)}
-							</div>
+			<div className='flex justify-center items-center flex-1 flex-col px-8'>
+				<section className='flex w-full h-25 space-x-2 justify-center items-center'>
+					<ActionHeader>
+						<span className='text-xl w-fit h-fit text-center'> Create your own tierlist! </span>
+						<Link href={'/dashboard/create'}>
+							<ActionButton variant='primary'>Create New Tierlist</ActionButton>
+						</Link>
+					</ActionHeader>
+					<ActionHeader>
+						<span className='text-xl w-fit h-fit text-center'>
+							Get a tierlist ID from a friend to join!
+						</span>
+						<div className='flex justify-center items-center space-x-2'>
+							<Input
+								label=''
+								id={'join'}
+								value={joinTierListId}
+								onChange={(e) => setJoinTierListId(e.target.value)}
+								placeholder='Tierlist ID'
+								className='w-full p-2 border border-black rounded-md shadow-sm focus:border-indigo-500 sm:text-sm'
+							/>
+							<ActionButton onClick={joinTierListOnClick} variant='primary' className='h-fit'>
+								Join Tierlist
+							</ActionButton>
 						</div>
-					</div>
+					</ActionHeader>
+				</section>
+				<div className='flex flex-1 justify-center w-full'>
+					<section className='flex flex-col w-full mx-16 mt-8 items-center'>
+						<h1> Your Tierlists</h1>
+						{userTierLists.length == 0 ? (
+							<p className='text-gray-500 italic mt-4'>
+								No tierlists found. Create one to get started!
+							</p>
+						) : (
+							<div className='w-full space-y-2 px-16'>
+								{userCreatedTierLists.map((tierList: TierList) => (
+									<TierListItemCard
+										key={tierList.id}
+										tierList={tierList}
+										refreshCallback={refreshTierLists}
+									/>
+								))}
+								{otherTierLists.map((tierList: TierList) => (
+									<TierListItemCard
+										key={tierList.id}
+										tierList={tierList}
+										refreshCallback={refreshTierLists}
+									/>
+								))}
+							</div>
+						)}
+					</section>
 				</div>
 			</div>
+			{popupError ? <PopupMessage message={popupError} onClose={() => setPopupError('')} /> : null}
 		</div>
 	);
 };
