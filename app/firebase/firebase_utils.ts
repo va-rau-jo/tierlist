@@ -138,17 +138,31 @@ export const leaveTierList = async (
 ): Promise<FirebaseReturnStatus> => {
 	/**
 	 * Removes a tier list from the user's list of tier lists.
+	 *
+	 * Also removes that person's rankings from the tierlist's rankings.
 	 * @param tierListId - The ID of the tier list to leave.
 	 * @param userId - The ID of the user.
 	 * @param db - The Firebase database object.
 	 */
-	try {
-		const userTierListDoc = doc(db, `users/${userId}/tierlists`, tierListId);
-		await deleteDoc(userTierListDoc);
-		return FirebaseReturnStatus.OK;
-	} catch {
+	// Remove tierlist from user's list
+	const userTierListDoc = doc(db, `users/${userId}/tierlists`, tierListId);
+	await deleteDoc(userTierListDoc);
+
+	// Remove user's rankings
+	const tierListRef = doc(db, 'tierlist', tierListId);
+	const tierListDoc = await getDoc(tierListRef);
+
+	if (!tierListDoc.exists()) {
 		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
 	}
+
+	const currentRankings = tierListDoc.data().rankings || {};
+	console.log(currentRankings);
+	// Remove this user's rankings
+	delete currentRankings[userId];
+	await updateDoc(tierListRef, { rankings: currentRankings });
+
+	return FirebaseReturnStatus.OK;
 };
 
 export const deleteTierList = async (

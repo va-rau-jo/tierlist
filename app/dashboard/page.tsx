@@ -15,7 +15,7 @@ import TierListItemCard from './components/TierListItemCard';
 import NavBar from '../components/NavBar';
 import Link from 'next/link';
 import { Input } from '../components/Input';
-import PopupMessage from '../components/PopupMessage';
+import { usePopup } from '../components/popup/PopupContext';
 
 // Displays the create and join actions at the top of the page.
 const ActionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -28,10 +28,10 @@ const ActionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 const DashboardPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
+	const { showPopup } = usePopup();
 	const router = useRouter();
 	const [userTierLists, setUserTierLists] = React.useState<TierList[]>([]);
 	const [joinTierListId, setJoinTierListId] = React.useState('');
-	const [popupError, setPopupError] = React.useState('');
 	const [isLoadingTierLists, setIsLoadingTierLists] = React.useState(true);
 
 	useEffect(() => {
@@ -72,16 +72,16 @@ const DashboardPage: React.FC = () => {
 		if (joinTierListId) {
 			joinTierList(joinTierListId, user.uid, db).then((status) => {
 				if (status === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
-					setPopupError(`Tierlist ${joinTierListId} was not found.`);
+					showPopup(`Tierlist ${joinTierListId} was not found.`, 'error');
 				} else if (status === FirebaseReturnStatus.ALREADY_JOINED_TIERLIST_ERROR) {
 					const tierlistName = userTierLists.find((t) => t.id === joinTierListId)?.name;
-					setPopupError(`You have already joined tierlist ${tierlistName}.`);
+					showPopup(`You have already joined tierlist ${tierlistName}.`, 'error');
 				} else {
 					refreshTierLists();
 				}
 			});
 		} else {
-			setPopupError('Tierlist ID cannot be empty.');
+			showPopup('Tierlist ID cannot be empty.', 'error');
 		}
 	};
 
@@ -94,7 +94,7 @@ const DashboardPage: React.FC = () => {
 	return (
 		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200 flex flex-col'>
 			<NavBar />
-			<div className='flex justify-center items-center flex-1 flex-col px-8'>
+			<div className='flex justify-center items-center flex-1 flex-col px-8 mt-16'>
 				<section className='flex w-full h-25 space-x-2 justify-center items-center'>
 					<ActionHeader>
 						<span className='text-xl w-fit h-fit text-center'> Create your own tierlist! </span>
@@ -121,35 +121,32 @@ const DashboardPage: React.FC = () => {
 						</div>
 					</ActionHeader>
 				</section>
-				<div className='flex flex-1 justify-center w-full'>
-					<section className='flex flex-col w-full mx-16 mt-8 items-center'>
-						<h1> Your Tierlists</h1>
-						{userTierLists.length == 0 ? (
-							<p className='text-gray-500 italic mt-4'>
-								No tierlists found. Create one to get started!
-							</p>
-						) : (
-							<div className='w-full space-y-2 px-16'>
-								{userCreatedTierLists.map((tierList: TierList) => (
-									<TierListItemCard
-										key={tierList.id}
-										tierList={tierList}
-										refreshCallback={refreshTierLists}
-									/>
-								))}
-								{otherTierLists.map((tierList: TierList) => (
-									<TierListItemCard
-										key={tierList.id}
-										tierList={tierList}
-										refreshCallback={refreshTierLists}
-									/>
-								))}
-							</div>
-						)}
-					</section>
-				</div>
+				<section className='flex flex-1 flex-col w-full mx-16 mt-8 items-center'>
+					<h1> Your Tierlists</h1>
+					{userTierLists.length == 0 ? (
+						<p className='text-gray-500 italic mt-4'>
+							No tierlists found. Create one to get started!
+						</p>
+					) : (
+						<div className='w-full space-y-2 px-16'>
+							{userCreatedTierLists.map((tierList: TierList) => (
+								<TierListItemCard
+									key={tierList.id}
+									tierList={tierList}
+									refreshCallback={refreshTierLists}
+								/>
+							))}
+							{otherTierLists.map((tierList: TierList) => (
+								<TierListItemCard
+									key={tierList.id}
+									tierList={tierList}
+									refreshCallback={refreshTierLists}
+								/>
+							))}
+						</div>
+					)}
+				</section>
 			</div>
-			{popupError ? <PopupMessage message={popupError} onClose={() => setPopupError('')} /> : null}
 		</div>
 	);
 };

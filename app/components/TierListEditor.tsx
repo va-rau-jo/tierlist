@@ -15,7 +15,8 @@ import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Tier } from '../model/Tier';
 import { generateUniqueId } from '../utils';
 import { TIER_ITEM_HEIGHT } from '../constants';
-import PopupMessage from './PopupMessage';
+import { usePopup } from './popup/PopupContext';
+import { useRouter } from 'next/navigation';
 
 enum TierListEditorMode {
 	Create,
@@ -39,6 +40,8 @@ const createNewTier = (name: string, color: string) => {
 
 const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => {
 	const { db, isLoading, user } = useFirebase();
+	const router = useRouter();
+	const { showPopup } = usePopup();
 	// Name and description of the tier list
 	const [listName, setListName] = useState('');
 	const [listDescription, setListDescription] = useState('');
@@ -54,8 +57,6 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		createNewTier('D', '#7FFFFF'),
 		createNewTier('F', '#FF7FFF'),
 	]);
-	// Message that displays at the top of the page.
-	const [message, setMessage] = useState('');
 	// Replaces save button if we are saving.
 	const [isSaving, setIsSaving] = useState(false);
 	// Id of the created tier list (so we don't re-create instead of overwriting).
@@ -64,8 +65,6 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const [creatorId, setCreatorId] = useState(user?.uid);
 	const [editorIds, setEditorIds] = useState<string[]>([]);
 	const [editorNames, setEditorNames] = useState<Map<string, string>>(new Map<string, string>());
-	const [popupError, setPopupError] = useState('');
-	const [popupMessage, setPopupMessage] = useState('');
 
 	useEffect(() => {
 		if (isLoading || !user || !db) {
@@ -96,7 +95,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		};
 
 		fetchTierList();
-	}, [mode, listId, db, user, isLoading]);
+	}, [mode, listId, db, user, isLoading, router]);
 
 	if (!user || !db) {
 		return null;
@@ -145,15 +144,15 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	// Save the tier list to Firestore
 	const saveTierListOnClick = async () => {
 		if (!listName.trim()) {
-			setPopupError('Please give the tier list a name.');
+			showPopup('Please give the tier list a name.', 'error');
 			return;
 		}
 		if (items.some((item: TierListItemModel) => !item.value.trim())) {
-			setPopupError('Please give all items a description or image URL.');
+			showPopup('Please give all items a description or image URL.', 'error');
 			return;
 		}
 		if (tiers.some((tier) => !tier.name.trim())) {
-			setPopupError('Please give all tiers a name.');
+			showPopup('Please give all tiers a name.', 'error');
 			return;
 		}
 
@@ -175,17 +174,21 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			// We already created a tier list, update the updateable fields.
 			updateTierList(listId, newTierList, db).then((status) => {
 				if (status !== FirebaseReturnStatus.OK) {
-					setPopupError('Error occurred updating the tierlist: ' + status);
+					showPopup(`Error occurred updating the tierlist: ${status}`, 'error');
 				} else {
-					setPopupMessage('Tier list updated successfully!');
+					showPopup('Tier list updated successfully!', 'success');
 					setIsSaving(false);
+					// If no longer an editor, leave the page.
+					if (!editorIds.includes(user.uid)) {
+						router.push('/dashboard');
+					}
 				}
 			});
 		} else {
 			// Create a new tier list, update Firebase set fields like tierlist id.
 			addTierList(newTierList, db).then((returnedTierList) => {
 				newTierList = returnedTierList;
-				setPopupMessage('Tier list saved successfully!');
+				showPopup('Tier list created successfully!', 'success');
 				setIsSaving(false);
 				setListId(newTierList.id);
 			});
@@ -290,15 +293,6 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	return (
 		<div className='bg-white p-8 rounded-lg shadow-xl max-w-4xl mx-auto'>
 			<h2 className='text-3xl font-bold mb-6 text-center'>{title}</h2>
-			{message && (
-				<div
-					className={`p-3 mb-4 rounded-md text-center ${
-						message.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-					}`}
-				>
-					{message}
-				</div>
-			)}
 			{listId && (
 				<Input
 					label='Tier List Id'
@@ -400,11 +394,6 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					{isSaving ? 'Saving...' : 'Save Tier List'}
 				</Button>
 			</div>
-			{popupError ? (
-				<PopupMessage message={popupError} type='error' onClose={() => setPopupError('')} />
-			) : popupMessage ? (
-				<PopupMessage message={popupMessage} type='success' onClose={() => setPopupMessage('')} />
-			) : null}
 		</div>
 	);
 };

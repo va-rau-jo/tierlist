@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 // import { AuthProvider } from './config/AuthContext';
 import { FirebaseProvider } from './firebase/FirebaseProvider';
+import { PopupProvider } from './components/popup/PopupContext';
+import GlobalPopup from './components/popup/GlobalPopup';
 
 const geistSans = Geist({
 	variable: '--font-geist-sans',
@@ -33,7 +35,11 @@ export default function RootLayout({
 				/>
 			</head>
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-				<FirebaseProvider>{children}</FirebaseProvider>
+				<FirebaseProvider>
+					<PopupProvider>
+						{children} <GlobalPopup />
+					</PopupProvider>
+				</FirebaseProvider>
 			</body>
 		</html>
 	);

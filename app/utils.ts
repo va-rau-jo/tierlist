@@ -8,3 +8,10 @@ export const getInitials = (name: string) => {
 		.map((n) => n[0])
 		.join('');
 };
+
+export const truncateText = (text: string, maxLength: number) => {
+	if (text.length > maxLength) {
+		return text.substring(0, maxLength) + '...';
+	}
+	return text;
+};
