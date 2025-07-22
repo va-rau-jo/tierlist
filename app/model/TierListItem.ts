@@ -1,13 +1,13 @@
 // Represents a tier list item fetched from Firebase.
 export class TierListItemModel {
 	id: string;
-	type: 'text' | 'image';
-	value: string;
+	name: string;
+	imageUrl: string;
 
-	constructor(id: string, type: 'text' | 'image' = 'text', value: string = '') {
+	constructor(id: string, name: string, imageUrl: string) {
 		this.id = id;
-		this.type = type;
-		this.value = value;
+		this.name = name;
+		this.imageUrl = imageUrl;
 	}
 }
 
@@ -22,12 +22,12 @@ export class TierListItem extends TierListItemModel {
 
 	constructor(
 		id: string,
-		type: 'text' | 'image' = 'text',
-		value: string = '',
+		name: string,
+		imageUrl: string,
 		userName: string,
 		isModifiable: boolean = true
 	) {
-		super(id, type, value);
+		super(id, name, imageUrl);
 		this.userName = userName;
 		this.isModifiable = isModifiable;
 	}

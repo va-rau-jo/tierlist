@@ -73,8 +73,8 @@ export const updateTierList = async (
 		})),
 		items: newTierList.items.map((item: TierListItemModel) => ({
 			id: item.id,
-			type: item.type,
-			value: item.value,
+			name: item.name,
+			imageUrl: item.imageUrl,
 		})),
 	};
 

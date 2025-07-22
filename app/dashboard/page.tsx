@@ -16,6 +16,7 @@ import NavBar from '../components/NavBar';
 import Link from 'next/link';
 import { Input } from '../components/Input';
 import { usePopup } from '../components/popup/PopupContext';
+import { PageBody } from '../components/PageBody';
 
 // Displays the create and join actions at the top of the page.
 const ActionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -92,9 +93,9 @@ const DashboardPage: React.FC = () => {
 	};
 
 	return (
-		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200 flex flex-col'>
+		<PageBody className='flex flex-col items-center'>
 			<NavBar />
-			<div className='flex justify-center items-center flex-1 flex-col px-8 mt-16'>
+			<div className='flex justify-center items-center flex-1 flex-col px-8 mt-16 max-w-4xl'>
 				<section className='flex w-full h-25 space-x-2 justify-center items-center'>
 					<ActionHeader>
 						<span className='text-xl w-fit h-fit text-center'> Create your own tierlist! </span>
@@ -147,7 +148,7 @@ const DashboardPage: React.FC = () => {
 					)}
 				</section>
 			</div>
-		</div>
+		</PageBody>
 	);
 };
 

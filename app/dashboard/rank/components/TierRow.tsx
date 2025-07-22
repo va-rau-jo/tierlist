@@ -1,11 +1,23 @@
-'use client'; // For App Router
+/**
+ * TierRow component displays a single row in a tier list, containing items
+ * grouped by the user.
+ *
+ * Features:
+ * - Displays tier name with custom background color
+ * - Supports drag and drop functionality for items
+ * - Shows user column headers for the first tier
+ * - Renders items grouped by user in a flex layout
+ */
+
+'use client';
+
 import React from 'react';
-import { useDroppable } from '@dnd-kit/core';
-import DraggableItem from './DraggableItem'; // Import the draggable item
 import { TierListItemModel } from '../../../model/TierListItem';
 import { Tier } from '../../../model/Tier';
-import { generateUniqueId } from '../../../utils';
 import ColumnHeader from '@/app/components/ColumnHeader';
+import RenderedItem from './RenderedItem';
+import { useDroppable } from '@dnd-kit/core';
+import { TIER_ROW_BG_COLOR_HOVER } from '@/app/constants';
 
 interface TierRowProps {
 	tier: Tier;
@@ -16,16 +28,18 @@ interface TierRowProps {
 }
 
 const TierRow: React.FC<TierRowProps> = ({ tier, index, items }) => {
-	const { setNodeRef } = useDroppable({
+	const { isOver, setNodeRef } = useDroppable({
 		id: tier.id,
 	});
 
+	const style = { backgroundColor: isOver ? TIER_ROW_BG_COLOR_HOVER : '' };
+
 	return (
 		<div
-			ref={setNodeRef} // Attach the ref for DND-Kit
-			className={`flex grow-1 sm:flex-row items-center h-30 ${
-				index !== 0 ? 'border-t-4 border-black' : 'border-t-4 border-black'
-			}`}
+			ref={setNodeRef}
+			style={style}
+			id={tier.id}
+			className='flex grow-1 sm:flex-row items-center h-30 border-t-4 border-black'
 		>
 			<div
 				style={{ backgroundColor: tier.color }}
@@ -36,14 +50,14 @@ const TierRow: React.FC<TierRowProps> = ({ tier, index, items }) => {
 			<div className='flex flex-1 h-full'>
 				{Array.from(items.entries()).map(([userName, items], i) => (
 					<React.Fragment key={i}>
-						<div className='relative tier-items flex-1 flex flex-wrap gap-2 p-2 border-r-4'>
+						<div className='relative tier-items flex-1 flex flex-wrap gap-2 p-2'>
 							{index === 0 && i > 0 && (
 								<div className='absolute flex justify-center items-center -top-9 -left-0 -right-0 w-full p-0'>
 									<ColumnHeader text={userName} />
 								</div>
 							)}
 							{items.map((item) => (
-								<DraggableItem key={generateUniqueId()} item={item} />
+								<RenderedItem key={item.id} item={item} />
 							))}
 						</div>
 					</React.Fragment>
@@ -53,18 +67,4 @@ const TierRow: React.FC<TierRowProps> = ({ tier, index, items }) => {
 	);
 };
 
-// You might create a generic DroppableArea for the unassigned area if you want
-const DroppableArea: React.FC<{ id: string; children: React.ReactNode; className: string }> = ({
-	id,
-	children,
-	className,
-}) => {
-	const { setNodeRef } = useDroppable({ id });
-	return (
-		<div ref={setNodeRef} className={className}>
-			{children}
-		</div>
-	);
-};
-
-export { TierRow, DroppableArea };
+export { TierRow };

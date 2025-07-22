@@ -10,7 +10,7 @@ export default function NavBar() {
 	}
 
 	return (
-		<div className='mb-2 flex flex-row justify-between p-4'>
+		<div className='mb-2 flex flex-row justify-between p-4 w-full'>
 			<div className='flex space-x-4'>
 				<Link href={'/dashboard'}>
 					<Button variant='danger'>Back</Button>

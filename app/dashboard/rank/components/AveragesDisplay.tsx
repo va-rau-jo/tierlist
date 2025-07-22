@@ -1,3 +1,14 @@
+/**
+ * A React component that displays the average rankings of items in a tier list
+ * using a gradient bar visualization.
+ *
+ * The component shows:
+ * - A vertical gradient bar representing different tiers
+ * - Points plotted along the gradient showing where items fall on average
+ * - Clickable points that reveal item details (name and average ranking)
+ * - Tier markers showing boundaries between tiers
+ */
+
 import ColumnHeader from '@/app/components/ColumnHeader';
 import { TierList, TierListUserRankings } from '@/app/model/TierList';
 import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
@@ -11,10 +22,9 @@ class ItemStatus {
 	average: number;
 	constructor(item: TierListItemModel, count: number, sum: number) {
 		// Username not needed here
-		this.item = new TierListItem(item.id, item.type, item.value, '', false);
+		this.item = new TierListItem(item.id, item.name, item.imageUrl, '', false);
 		this.count = count;
 		this.sum = sum;
-
 		// Will be set later
 		this.average = 0;
 	}
@@ -165,7 +175,7 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 								className='absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white border border-gray-300 rounded px-2 py-1 no-wrap text-sm shadow-lg cursor-default'
 								onClick={(e) => e.stopPropagation()}
 							>
-								<div>{status.item.value}</div>
+								<div>{status.item.name}</div>
 								<div>Average: {status.average}</div>
 							</div>
 						)}
@@ -188,7 +198,7 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 					{itemMappings.map(renderItemPoints)}
 					{tierColorPercentages.map((percentage: number, i: number) => (
 						<div
-							className='absolute flex w-full left-0 group'
+							className='absolute flex w-full left-0'
 							key={i}
 							style={{
 								paddingBottom: 'calc(var(--spacing) * ' + TIER_ROW_HEIGHT / 2 + ')',

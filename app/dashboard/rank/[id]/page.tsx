@@ -14,18 +14,22 @@ import {
 import { Tier, UNASSIGNED_TIER } from '@/app/model/Tier';
 import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
 import NavBar from '@/app/components/NavBar';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
-import { DroppableArea, TierRow } from '@/app/dashboard/rank/components/TierRow';
-import DraggableItem from '@/app/dashboard/rank/components/DraggableItem';
+import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import { TierRow } from '@/app/dashboard/rank/components/TierRow';
 import { TierList, TierListUserRankings } from '@/app/model/TierList';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { TIER_ROW_HEIGHT } from '@/app/constants';
+import { TIER_ROW_BG_COLOR, TIER_ROW_HEIGHT } from '@/app/constants';
 import { AveragesDisplay } from '../components/AveragesDisplay';
+import { usePopup } from '@/app/components/popup/PopupContext';
+import { PageBody } from '@/app/components/PageBody';
+import { DroppableArea } from '../components/DroppableArea';
+import RenderedItem from '@/app/dashboard/rank/components/RenderedItem';
 
 const RankPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
 	const router = useRouter();
+	const { showPopup } = usePopup();
 	// Whether we are still loading the tier list).
 	const [isLoadingTierList, setIsLoadingTierList] = useState(true);
 	const tierListId = useParams().id?.toString();
@@ -33,12 +37,8 @@ const RankPage: React.FC = () => {
 
 	// Maps user ID to the user's name
 	const [userIdToNameMap, setUserIdToNameMap] = useState<Map<string, string>>();
-	// Message that displays at the top of the page.
-	const [message, setMessage] = useState('');
 	// Replaces save button if we are saving.
 	const [isSaving, setIsSaving] = useState(false);
-	// Dragging state variables
-	const [activeItem, setActiveItem] = useState<TierListItemModel | null>(null);
 	// Maps user ID to TierListRankings: Tier ID: list of tier list items
 	const [tierListRankings, setTierListRankings] = useState<TierListUserRankings>(new Map());
 	// Maps user ID to TierListRankings, for the other users.
@@ -124,23 +124,10 @@ const RankPage: React.FC = () => {
 		return;
 	}
 
-	const handleDragStart = (event: DragStartEvent) => {
-		// Find the tier list item that is currently being dragged, and set it to
-		// active.
-		let foundItem: TierListItemModel | null = null;
-		for (const [, items] of userRankings.entries()) {
-			foundItem = items.find((item) => item.id === String(event.active.id)) || null;
-			if (foundItem) break;
-		}
-		console.log(foundItem);
-		setActiveItem(foundItem);
-	};
-
 	const handleDragEnd = (event: DragEndEvent) => {
 		// Find the currently dragged item, and move it to the new correct tier
 		// and update the tierListRankings map.
 		const { active, over } = event;
-		setActiveItem(null); // Clear active item after drag ends
 		// The item is not being held over a tier.
 		if (!over) {
 			return;
@@ -181,34 +168,30 @@ const RankPage: React.FC = () => {
 		});
 	};
 
-	const handleDragCancel = () => {
-		setActiveItem(null);
-	};
-
 	const saveRankings = async () => {
 		if (!tierListId || !db) {
 			return;
 		}
 		setIsSaving(true);
-		await updateTierListRankings(tierListId, user.uid, userRankings, db);
-		setIsSaving(false);
-		setMessage('Rankings saved successfully!');
+		updateTierListRankings(tierListId, user.uid, userRankings, db).then((status) => {
+			if (status !== FirebaseReturnStatus.OK) {
+				showPopup('Rankings failed to save.', 'error');
+			} else {
+				setIsSaving(false);
+				showPopup('Rankings saved successfully!', 'success');
+			}
+		});
 	};
 
 	const header = (
 		<>
 			<h2 className='text-3xl font-bold mb-2 text-center'>Rank {tierList.name}</h2>
-			<div className='flex justify-center space-x-8 text-lg py-2'>
-				<span> Description: {tierList.description} </span>
-				<span> Tier List Id: {tierListId} </span>
+			<div className='flex justify-center items-center space-x-8  py-2'>
+				<span className='text-lg'> Description: {tierList.description} </span>
+				<span className='text-lg'> Tier List Id: {tierListId} </span>
 				{tierList.editorIds.has(user.uid) && (
 					<Link href={`/dashboard/edit/${tierListId}`}>
-						<ActionButton
-							variant='outline'
-							className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium py-0'
-						>
-							Edit
-						</ActionButton>
+						<ActionButton variant='outline'>Edit</ActionButton>
 					</Link>
 				)}
 			</div>
@@ -287,7 +270,7 @@ const RankPage: React.FC = () => {
 					const userName = userIdToNameMap.get(userId)!;
 					const newItems = items.map(
 						(item) =>
-							new TierListItem(`${userId}-${item.id}`, item.type, item.value, userName, false)
+							new TierListItem(`${userId}-${item.id}`, item.name, item.imageUrl, userName, false)
 					);
 					allItems.set(userName, newItems);
 				}
@@ -302,40 +285,25 @@ const RankPage: React.FC = () => {
 	allRankings.set(user.uid, userRankings);
 
 	return (
-		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200'>
-			<NavBar />
-			<div>
-				<div className='bg-white px-8 pt-2 rounded-lg shadow-xl max-w-4xl mx-auto'>
-					{message && (
-						<div
-							className={`p-3 mb-4 rounded-md text-center ${
-								message.includes('Error')
-									? 'bg-red-100 text-red-700'
-									: 'bg-green-100 text-green-700'
-							}`}
-						>
-							{message}
-						</div>
-					)}
-					{header}
-					{toggleUserRankingsDiv}
-					<DndContext
-						onDragEnd={handleDragEnd}
-						onDragStart={handleDragStart}
-						onDragCancel={handleDragCancel}
-					>
+		<PageBody>
+			<DndContext onDragEnd={handleDragEnd}>
+				<NavBar />
+				<div>
+					<div className='bg-white px-8 pt-2 rounded-lg shadow-xl max-w-5xl mx-auto'>
+						{header}
+						{toggleUserRankingsDiv}
 						<DroppableArea
 							id={UNASSIGNED_TIER}
 							className={`w-full h-full min-h-30 bg-gray-800 flex items-center justify-center`}
 						>
 							<div className='pt-2 pl-2 pr-2 flex flex-wrap space-x-2'>
 								{userRankings.get(UNASSIGNED_TIER)?.map((item) => (
-									<DraggableItem key={item.id} item={item} />
+									<RenderedItem key={item.id} item={item} />
 								))}
 							</div>
 						</DroppableArea>
 						<div
-							className='flex flex-row bg-[#404040] border-b-4 border-l-4 border-r-4 border-black'
+							className={`flex flex-row bg-[${TIER_ROW_BG_COLOR}] border-b-4 border-l-4 border-r-4 border-black`}
 							style={{ height: mainContainerHeight }}
 						>
 							<div className='flex flex-col flex-3'>
@@ -347,27 +315,15 @@ const RankPage: React.FC = () => {
 								</>
 							)}
 						</div>
-						<DragOverlay>
-							{activeItem && (
-								<div
-									style={{
-										width: '80px',
-										height: 'auto',
-									}}
-								>
-									<DraggableItem item={activeItem} isOverlay={true} />
-								</div>
-							)}
-						</DragOverlay>
-					</DndContext>
-					<div className='flex flex-col sm:flex-row justify-center gap-4 mt-8'>
-						<Button onClick={saveRankings} disabled={isSaving}>
-							{isSaving ? 'Saving...' : 'Save Rankings'}
-						</Button>
+						<div className='flex flex-col sm:flex-row justify-center gap-4 mt-8'>
+							<Button onClick={saveRankings} disabled={isSaving}>
+								{isSaving ? 'Saving...' : 'Save Rankings'}
+							</Button>
+						</div>
 					</div>
 				</div>
-			</div>
-		</div>
+			</DndContext>
+		</PageBody>
 	);
 };
 

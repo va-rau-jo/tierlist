@@ -6,6 +6,7 @@ import { TierListEditor, TierListEditorMode } from '@/app/components/TierListEdi
 import { useFirebase } from '@/app/firebase/FirebaseProvider';
 import { getTierList, shouldRedirectToLogin } from '@/app/firebase/firebase_utils';
 import NavBar from '@/app/components/NavBar';
+import { PageBody } from '@/app/components/PageBody';
 
 const EditPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
@@ -43,12 +44,12 @@ const EditPage: React.FC = () => {
 	}
 
 	return (
-		<div className='min-h-screen bg-gradient-to-b from-orange-100 to-blue-200'>
+		<PageBody>
 			<NavBar />
 			<div>
 				<TierListEditor mode={TierListEditorMode.Edit} tierListId={tierListId} />
 			</div>
-		</div>
+		</PageBody>
 	);
 };
 

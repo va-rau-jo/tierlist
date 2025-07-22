@@ -75,8 +75,8 @@ export class TierList {
 			})),
 			items: this.items.map((item: TierListItemModel) => ({
 				id: item.id,
-				type: item.type,
-				value: item.value,
+				name: item.name,
+				imageUrl: item.imageUrl,
 			})),
 			userRankings: Array.from(this.userRankings.entries()).map(([userId, rankings]) => ({
 				userId,
@@ -93,7 +93,7 @@ export class TierList {
 			throw new Error('Invalid tier list object');
 		}
 		const tiers = obj.tiers.map((t: any) => new Tier(t.id, t.name, t.color));
-		const items = obj.items.map((i: any) => new TierListItemModel(i.id, i.type, i.value));
+		const items = obj.items.map((i: any) => new TierListItemModel(i.id, i.name, i.imageUrl));
 
 		const userRankings = new Map<string, TierListRankings>();
 		// Convert obj.rankings to a map of TierListUserRankings

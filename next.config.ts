@@ -1,7 +1,15 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-	reactStrictMode: false, // You would have set this to false if you disabled it
+	images: {
+		remotePatterns: [
+			{
+				protocol: 'https',
+				hostname: '**', // WARNING: Not recommended for production! Use specific domains.
+			},
+		],
+	},
+	reactStrictMode: false, // Disabled to prevent re-rendering.
 };
 
 export default nextConfig;

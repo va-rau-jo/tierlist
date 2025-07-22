@@ -17,6 +17,7 @@ import { generateUniqueId } from '../utils';
 import { TIER_ITEM_HEIGHT } from '../constants';
 import { usePopup } from './popup/PopupContext';
 import { useRouter } from 'next/navigation';
+import DraggableItem from '../dashboard/rank/components/RenderedItem';
 
 enum TierListEditorMode {
 	Create,
@@ -31,7 +32,7 @@ interface TierListEditorProps {
 }
 
 const createNewTierListItem = () => {
-	return new TierListItemModel(generateUniqueId(), 'text', '');
+	return new TierListItemModel(generateUniqueId(), '', '');
 };
 
 const createNewTier = (name: string, color: string) => {
@@ -107,23 +108,17 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 
 	// Add a new item input field
 	const handleAddItem = () => {
-		setItems([...items, currentAddItem]);
-		setCurrentAddItem(createNewTierListItem());
+		if (!currentAddItem.name) {
+			showPopup('Item name is required.', 'error');
+		} else {
+			setItems([...items, currentAddItem]);
+			setCurrentAddItem(createNewTierListItem());
+		}
 	};
 
 	// Update item value (text or image URL)
 	const handleCurrentItemChange = (field: string, value: string) => {
 		setCurrentAddItem((prev) => ({ ...prev, [field]: value }));
-	};
-
-	// Update item value (text or image URL)
-	const handleItemChange = (id: string, field: string, value: string) => {
-		setItems(items.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
-	};
-
-	// Remove an item input field
-	const handleRemoveItem = (id: string) => {
-		setItems(items.filter((item) => item.id !== id));
 	};
 
 	// Add a new tier
@@ -145,10 +140,6 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const saveTierListOnClick = async () => {
 		if (!listName.trim()) {
 			showPopup('Please give the tier list a name.', 'error');
-			return;
-		}
-		if (items.some((item: TierListItemModel) => !item.value.trim())) {
-			showPopup('Please give all items a description or image URL.', 'error');
 			return;
 		}
 		if (tiers.some((tier) => !tier.name.trim())) {
@@ -249,37 +240,26 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		<div className='flex flex-col bg-gray-50 rounded-lg border border-gray-200 mb-2'>
 			<h2 className='text-center text-xl'> Add An Item</h2>
 			<div className='flex flex-col sm:flex-row gap-3 items-center justify-center'>
-				<select
-					value={currentAddItem.value}
-					onChange={(e) => handleItemChange(currentAddItem.id, 'type', e.target.value)}
-					className='p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 w-full sm:w-auto'
-				>
-					<option value='text'>Text</option>
-					<option value='image'>Image URL</option>
-				</select>
-				{currentAddItem.type === 'text' ? (
-					<Input
-						label=''
-						id={`item-text-${currentAddItem.id}`}
-						value={currentAddItem.value}
-						onChange={(e: { target: { value: string } }) =>
-							handleCurrentItemChange('value', e.target.value)
-						}
-						placeholder='Item Name'
-						additionalClassNames='flex-grow'
-					/>
-				) : (
-					<Input
-						label=''
-						id={`item-image-${currentAddItem.id}`}
-						value={currentAddItem.value}
-						onChange={(e: { target: { value: string } }) =>
-							handleCurrentItemChange('imageUrl', e.target.value)
-						}
-						placeholder='Image URL'
-						additionalClassNames='flex-grow'
-					/>
-				)}
+				<Input
+					label=''
+					id={`item-text-${currentAddItem.id}`}
+					value={currentAddItem.name}
+					onChange={(e: { target: { value: string } }) =>
+						handleCurrentItemChange('name', e.target.value)
+					}
+					placeholder='Item Name (Required)'
+					additionalClassNames='flex-grow'
+				/>
+				<Input
+					label=''
+					id={`item-image-${currentAddItem.id}`}
+					value={currentAddItem.imageUrl}
+					onChange={(e: { target: { value: string } }) =>
+						handleCurrentItemChange('imageUrl', e.target.value)
+					}
+					placeholder='Image URL (Optional)'
+					additionalClassNames='flex-grow'
+				/>
 				<ActionButton variant='outline' onClick={handleAddItem} className='px-6'>
 					Add Item
 				</ActionButton>
@@ -291,7 +271,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const title = mode === TierListEditorMode.Create ? 'Create New Tier List' : 'Edit Tier List';
 
 	return (
-		<div className='bg-white p-8 rounded-lg shadow-xl max-w-4xl mx-auto'>
+		<div className='bg-white p-8 rounded-lg shadow-xl mx-auto'>
 			<h2 className='text-3xl font-bold mb-6 text-center'>{title}</h2>
 			{listId && (
 				<Input
@@ -335,12 +315,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				) : (
 					<div className='pt-2 pl-2 pr-2 flex flex-wrap space-x-2'>
 						{items.map((item: TierListItemModel, index) => (
-							<div
-								key={index}
-								className='w-15 mb-2 aspect-square flex items-center justify-center bg-white'
-							>
-								<span> {item.value}</span>
-							</div>
+							<DraggableItem key={index} item={item} isDraggable={false} />
 						))}
 					</div>
 				)}
