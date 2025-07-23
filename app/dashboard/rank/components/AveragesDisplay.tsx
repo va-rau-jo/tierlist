@@ -14,6 +14,8 @@ import { TierList, TierListUserRankings } from '@/app/model/TierList';
 import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
 import { TIER_ROW_HEIGHT } from '@/app/constants';
 import { useState } from 'react';
+import Image from 'next/image';
+import CloseIcon from '../../../components/CloseIcon';
 
 class ItemStatus {
 	item: TierListItem;
@@ -60,7 +62,7 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 			.join(', ')})`,
 	};
 
-	// Create list of average items
+	// Create map of item id to the item status.
 	for (const [, rankings] of allRankings.entries()) {
 		for (const [tierId, items] of rankings.entries()) {
 			for (const item of items) {
@@ -81,37 +83,37 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 	}
 	let items = Array.from(averages.values());
 
-	items = [
-		new ItemStatus(new TierListItemModel('0', 'text', '0'), 1, 0),
-		new ItemStatus(new TierListItemModel('0', 'text', '0'), 1, 0),
-		new ItemStatus(new TierListItemModel('0', 'text', '0'), 1, 0),
-		new ItemStatus(new TierListItemModel('0.33', 'text', '0.33'), 1, 0.33),
-		new ItemStatus(new TierListItemModel('0.33', 'text', '0.33'), 1, 0.33),
-		new ItemStatus(new TierListItemModel('1', 'text', '1'), 1, 1),
-		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
-		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
-		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('1', 'text', '1'), 1, 1),
-		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
-		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
-		new ItemStatus(new TierListItemModel('5', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('5 (3)', 'text', '5 (3)'), 1, 5),
-		new ItemStatus(new TierListItemModel('1.5', 'text', '1.5'), 2, 3),
-		new ItemStatus(new TierListItemModel('2', 'text', '2'), 1, 2),
-		new ItemStatus(new TierListItemModel('3', 'text', '3'), 1, 3),
-		new ItemStatus(new TierListItemModel('4', 'text', '4'), 1, 4),
-		new ItemStatus(new TierListItemModel('4.5', 'text', '4.5'), 1, 4.5),
-		new ItemStatus(new TierListItemModel('5 (2)', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('5 (4)', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('5 (5)', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('5 (2)', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('5 (4)', 'text', '5'), 1, 5),
-		new ItemStatus(new TierListItemModel('5 (5)', 'text', '5'), 1, 5),
-	];
+	// items = [
+	// 	new ItemStatus(new TierListItemModel('0', 'text', ''), 1, 0),
+	// 	new ItemStatus(new TierListItemModel('0', 'asdfasdfasdfadsfasdfasdfasdfasdfasdfasd', ''), 1, 0),
+	// 	new ItemStatus(new TierListItemModel('0', ' ', ''), 1, 0),
+	// 	new ItemStatus(new TierListItemModel('0.33', 'text', ''), 1, 0.33),
+	// 	new ItemStatus(new TierListItemModel('0.33', 'text', ''), 1, 0.33),
+	// 	new ItemStatus(new TierListItemModel('1', 'text', ''), 1, 1),
+	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5 (3)', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5 (3)', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('1', 'text', ''), 1, 1),
+	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5 (3)', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5 (3)', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5 (3)', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('1.5', 'text', ''), 2, 3),
+	// 	new ItemStatus(new TierListItemModel('2', 'text', ''), 1, 2),
+	// 	new ItemStatus(new TierListItemModel('3', 'text', ''), 1, 3),
+	// 	new ItemStatus(new TierListItemModel('4', 'text', ''), 1, 4),
+	// 	new ItemStatus(new TierListItemModel('4.5', 'text', ''), 1, 4.5),
+	// 	new ItemStatus(new TierListItemModel('5 (2)', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5 (4)', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5 (5)', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5 (2)', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5 (4)', 'text', ''), 1, 5),
+	// 	new ItemStatus(new TierListItemModel('5 (5)', 'text', ''), 1, 5),
+	// ];
 
 	items.forEach((item) => (item.average = Math.round((item.sum / item.count) * 100) / 100));
 	items.sort((a, b) => a.average - b.average);
@@ -119,37 +121,63 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 	// Map items to their ranking number, dupes are concatenated into 1 array.
 	const itemMappings: AverageItemMapping[] = [];
 	// Stores the indices of the tier markers (relative to total number of rows)
-	const tierMarkersIndices = [];
 	let previousItem: ItemStatus | undefined;
-	// Tracks the tier index we are on.
-	let previousIndex: number = 0;
-	// Tracks the number of rows in the gradient
-	let gradientRowsIndex = 0;
 	for (let i = 0; i < items.length; i += 1) {
 		const item = items[i];
-		if (!previousItem) {
-			itemMappings.push([item.average, [item]]);
-			gradientRowsIndex += 1;
+		if (previousItem && previousItem.average === item.average) {
+			const lastItem: AverageItemMapping = itemMappings[itemMappings.length - 1];
+			lastItem[1].push(item);
 		} else {
-			if (previousItem.average === item.average) {
-				const lastItem: AverageItemMapping = itemMappings[itemMappings.length - 1];
-				lastItem[1].push(item);
-				if (lastItem[1].length % 2 === 1) {
-					// Only add if we have odd number of items (will go to next line)
-					gradientRowsIndex += 1;
-				}
-			} else {
-				itemMappings.push([item.average, [item]]);
-				gradientRowsIndex += 1;
-			}
+			itemMappings.push([item.average, [item]]);
 		}
 		previousItem = item;
-		// While loop to possibly skip indices that are not rated at all
-		while (item.average >= previousIndex) {
-			tierMarkersIndices.push(gradientRowsIndex);
-			previousIndex += 1;
-		}
 	}
+
+	const createItemPopup = (status: ItemStatus) => {
+		// Get the range of the average, (e.g. S-A Tier or B Tier).
+		const lowTier = tiers[Math.ceil(status.average)].name;
+		const highTier = tiers[Math.floor(status.average)].name;
+		const tierText = lowTier === highTier ? `${lowTier} Tier` : `${highTier}-${lowTier} Tier`;
+		// Set tier color to the higher tier.
+		const tierColor = colors[Math.floor(status.average)];
+		return (
+			<div
+				className='absolute bottom-4 left-1/2 flex flex-col w-max transform -translate-x-1/2 bg-white border border-gray-300 rounded text-sm shadow-lg cursor-default'
+				onClick={(e) => e.stopPropagation()}
+			>
+				<div className='flex space-x-2'>
+					{status.item.imageUrl ? (
+						<Image
+							src={status.item.imageUrl}
+							height='100'
+							width='100'
+							alt='Tier list item'
+							className='object-cover'
+						/>
+					) : null}
+					<div className='flex flex-col min-w-fit justify-center'>
+						<div className='flex justify-end'>
+							<button
+								className='w-5 h-5 flex justify-center items-center hover:rounded-full hover:bg-gray-200 transition-all cursor-pointer select-none'
+								onClick={() => toggleDisplayedItemIndex([])}
+							>
+								<CloseIcon />
+							</button>
+						</div>
+						<div className='flex flex-col justify-center items-center mb-4 px-2 flex-1'>
+							<span className='text-lg'>{status.item.name}</span>
+							<span
+								className='rounded text-center font-bold px-6 select-none'
+								style={{ backgroundColor: tierColor }}
+							>
+								{tierText}
+							</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	};
 
 	const renderItemPoints = (itemMapping: [number, ItemStatus[]]) => {
 		const tierIndex = itemMapping[0];
@@ -165,20 +193,15 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 				style={{ top: topPx }}
 			>
 				{itemMapping[1].map((status, i) => (
+					// Circle Icon
 					<div
 						key={i}
 						className='relative w-2 h-2 rounded-full border-2 border-black bg-black cursor-pointer z-100'
 						onClick={() => toggleDisplayedItemIndex([tierIndex, i])}
 					>
-						{tierIndex === displayedItemIndex[0] && i === displayedItemIndex[1] && (
-							<div
-								className='absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white border border-gray-300 rounded px-2 py-1 no-wrap text-sm shadow-lg cursor-default'
-								onClick={(e) => e.stopPropagation()}
-							>
-								<div>{status.item.name}</div>
-								<div>Average: {status.average}</div>
-							</div>
-						)}
+						{tierIndex === displayedItemIndex[0] && i === displayedItemIndex[1]
+							? createItemPopup(status)
+							: null}
 					</div>
 				))}
 			</div>
@@ -206,6 +229,7 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 								top: 'calc(' + percentage + '%)',
 							}}
 						>
+							{/* Tier markers on the side of the average display. */}
 							<div className='relative w-2 h-px border border-gray-500'></div>
 						</div>
 					))}

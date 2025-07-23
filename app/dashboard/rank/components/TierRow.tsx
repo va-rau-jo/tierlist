@@ -37,9 +37,8 @@ const TierRow: React.FC<TierRowProps> = ({ tier, index, items }) => {
 	return (
 		<div
 			ref={setNodeRef}
-			style={style}
 			id={tier.id}
-			className='flex grow-1 sm:flex-row items-center h-30 border-t-4 border-black'
+			className='flex grow-1 sm:flex-row items-center h-30 border-t-4 border-black border-r-4'
 		>
 			<div
 				style={{ backgroundColor: tier.color }}
@@ -50,7 +49,10 @@ const TierRow: React.FC<TierRowProps> = ({ tier, index, items }) => {
 			<div className='flex flex-1 h-full'>
 				{Array.from(items.entries()).map(([userName, items], i) => (
 					<React.Fragment key={i}>
-						<div className='relative tier-items flex-1 flex flex-wrap gap-2 p-2'>
+						<div
+							className='tier-items flex-1 flex flex-wrap gap-2 p-2 border-l-4'
+							style={i == 0 && isOver ? { backgroundColor: TIER_ROW_BG_COLOR_HOVER } : undefined}
+						>
 							{index === 0 && i > 0 && (
 								<div className='absolute flex justify-center items-center -top-9 -left-0 -right-0 w-full p-0'>
 									<ColumnHeader text={userName} />

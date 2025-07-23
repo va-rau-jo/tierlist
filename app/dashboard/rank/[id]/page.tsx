@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useFirebase } from '@/app/firebase/FirebaseProvider';
 import { Button } from '@/app/components/Button';
@@ -14,9 +14,9 @@ import {
 import { Tier, UNASSIGNED_TIER } from '@/app/model/Tier';
 import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
 import NavBar from '@/app/components/NavBar';
-import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { TierRow } from '@/app/dashboard/rank/components/TierRow';
-import { TierList, TierListUserRankings } from '@/app/model/TierList';
+import { TierList, TierListRankings, TierListUserRankings } from '@/app/model/TierList';
 import { useRouter } from 'next/navigation';
 import { TIER_ROW_BG_COLOR, TIER_ROW_HEIGHT } from '@/app/constants';
 import { AveragesDisplay } from '../components/AveragesDisplay';
@@ -48,6 +48,23 @@ const RankPage: React.FC = () => {
 		new Map()
 	);
 	const [isDisplayingAverage, setIsDisplayingAverage] = useState(false);
+	const [activeItemId, setActiveItemId] = useState<string | null>();
+
+	const activeItem = useMemo(() => {
+		if (activeItemId && user) {
+			const userRanking = tierListRankings.get(user.uid);
+			if (userRanking) {
+				const tierIterator = userRanking.values();
+				let foundItem;
+				for (const items of tierIterator) {
+					foundItem = items.find((item) => item.id === activeItemId);
+					if (foundItem) break;
+				}
+				return foundItem;
+			}
+		}
+		return null;
+	}, [activeItemId, tierListRankings, user]);
 
 	useEffect(() => {
 		if (isLoading || !user || !db || !tierListId || !isLoadingTierList) {
@@ -168,6 +185,15 @@ const RankPage: React.FC = () => {
 			newTierItems.set(user.uid, newMap);
 			return newTierItems;
 		});
+		setActiveItemId(null); // Reset active ID when drag ends
+	};
+
+	const handleDragCancel = () => {
+		setActiveItemId(null); // Reset active ID if drag is cancelled
+	};
+
+	const handleDragStart = (event: DragStartEvent) => {
+		setActiveItemId(event.active.id as string);
 	};
 
 	const saveRankings = async () => {
@@ -256,14 +282,22 @@ const RankPage: React.FC = () => {
 			for (const [tierId, items] of rankingMap) {
 				if (tierId === tier.id) {
 					const userName = userIdToNameMap.get(userId)!;
-					const newItems = items.map(
-						(item) =>
-							new TierListItem(`${userId}-${item.id}`, item.name, item.imageUrl, userName, false)
-					);
+					const newItems = [];
+					let test = '';
+					for (let i = 0; i < 20; i++) {
+						test += 'A';
+
+						newItems.push(new TierListItem(`${userId}-${i}`, test, '', userName, false));
+					}
+					// const newItems = items.map(
+					// 	(item) =>
+					// 		new TierListItem(`${userId}-${item.id}`, item.name, item.imageUrl, userName, false)
+					// );
 					allItems.set(userName, newItems);
 				}
 			}
 		}
+		console.log(allItems);
 		return <TierRow key={tier.id} tier={tier} index={index} items={allItems} />;
 	};
 
@@ -300,7 +334,11 @@ const RankPage: React.FC = () => {
 
 	return (
 		<PageBody>
-			<DndContext onDragEnd={handleDragEnd}>
+			<DndContext
+				onDragStart={handleDragStart}
+				onDragEnd={handleDragEnd}
+				onDragCancel={handleDragCancel}
+			>
 				<NavBar />
 				<div>
 					<div className='bg-white px-8 pt-2 rounded-lg shadow-xl max-w-5xl mx-auto'>
@@ -315,6 +353,7 @@ const RankPage: React.FC = () => {
 						</div>
 					</div>
 				</div>
+				<DragOverlay>{activeItem ? <RenderedItem item={activeItem} /> : null}</DragOverlay>
 			</DndContext>
 		</PageBody>
 	);
