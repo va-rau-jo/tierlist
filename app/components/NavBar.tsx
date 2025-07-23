@@ -1,4 +1,4 @@
-import { ActionButton, Button } from './Button';
+import { ActionButton } from './Button';
 import { useFirebase } from '../firebase/FirebaseProvider';
 import Link from 'next/link';
 import { usePopup } from './popup/PopupContext';
@@ -31,7 +31,6 @@ export default function NavBar() {
 					{user.uid}
 				</span>
 			</h1>
-
 			<div className='flex space-x-4'>
 				<ActionButton variant='danger' onClick={signOut}>
 					Sign Out
