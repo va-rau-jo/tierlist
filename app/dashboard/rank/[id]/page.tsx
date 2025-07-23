@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useFirebase } from '@/app/firebase/FirebaseProvider';
-import { ActionButton, Button } from '@/app/components/Button';
+import { Button } from '@/app/components/Button';
 import {
 	FirebaseReturnStatus,
 	getTierList,
@@ -17,7 +17,6 @@ import NavBar from '@/app/components/NavBar';
 import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import { TierRow } from '@/app/dashboard/rank/components/TierRow';
 import { TierList, TierListUserRankings } from '@/app/model/TierList';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TIER_ROW_BG_COLOR, TIER_ROW_HEIGHT } from '@/app/constants';
 import { AveragesDisplay } from '../components/AveragesDisplay';
@@ -25,6 +24,9 @@ import { usePopup } from '@/app/components/popup/PopupContext';
 import { PageBody } from '@/app/components/PageBody';
 import { DroppableArea } from '../components/DroppableArea';
 import RenderedItem from '@/app/dashboard/rank/components/RenderedItem';
+import { RankingPageHeader } from '../components/RankingPageHeader';
+
+const RANKING_CONTAINER_HEIGHT = `calc(var(--spacing) * ${TIER_ROW_HEIGHT * 6})`;
 
 const RankPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
@@ -183,21 +185,6 @@ const RankPage: React.FC = () => {
 		});
 	};
 
-	const header = (
-		<>
-			<h2 className='text-3xl font-bold mb-2 text-center'>Rank {tierList.name}</h2>
-			<div className='flex justify-center items-center space-x-8  py-2'>
-				<span className='text-lg'> Description: {tierList.description} </span>
-				<span className='text-lg'> Tier List Id: {tierListId} </span>
-				{tierList.editorIds.has(user.uid) && (
-					<Link href={`/dashboard/edit/${tierListId}`}>
-						<ActionButton variant='outline'>Edit</ActionButton>
-					</Link>
-				)}
-			</div>
-		</>
-	);
-
 	const toggleUserRankingsDiv = (
 		<div>
 			{tierListRankings && userIdToNameMap && (
@@ -257,6 +244,7 @@ const RankPage: React.FC = () => {
 		}
 	};
 
+	// Map a tier to a rendered TierRow object.
 	const mapTierRows = (tier: Tier, index: number) => {
 		// Maps username to list of items
 		const allItems = new Map<string, TierListItemModel[]>();
@@ -279,10 +267,36 @@ const RankPage: React.FC = () => {
 		return <TierRow key={tier.id} tier={tier} index={index} items={allItems} />;
 	};
 
-	const mainContainerHeight = `calc(var(--spacing) * ${TIER_ROW_HEIGHT * 6})`;
+	const unassignedArea = (
+		<DroppableArea
+			id={UNASSIGNED_TIER}
+			className={`w-full h-full min-h-30 bg-gray-800 flex items-center justify-center`}
+		>
+			<div className='pt-2 pl-2 pr-2 flex flex-wrap space-x-2'>
+				{userRankings.get(UNASSIGNED_TIER)?.map((item) => (
+					<RenderedItem key={item.id} item={item} />
+				))}
+			</div>
+		</DroppableArea>
+	);
 
 	const allRankings = new Map(displayedTierListRankings);
 	allRankings.set(user.uid, userRankings);
+	const rankingContainer = (
+		<div
+			className={`flex flex-row bg-[${TIER_ROW_BG_COLOR}] border-b-4 border-l-4 border-r-4 border-black`}
+			style={{ height: RANKING_CONTAINER_HEIGHT }}
+		>
+			<div className='flex flex-col flex-3'>
+				{tierList.tiers.map((tier, index) => mapTierRows(tier, index))}
+			</div>
+			{isDisplayingAverage && (
+				<>
+					<AveragesDisplay tierList={tierList} allRankings={allRankings} />
+				</>
+			)}
+		</div>
+	);
 
 	return (
 		<PageBody>
@@ -290,31 +304,10 @@ const RankPage: React.FC = () => {
 				<NavBar />
 				<div>
 					<div className='bg-white px-8 pt-2 rounded-lg shadow-xl max-w-5xl mx-auto'>
-						{header}
+						<RankingPageHeader tierList={tierList} userId={user.uid} />
 						{toggleUserRankingsDiv}
-						<DroppableArea
-							id={UNASSIGNED_TIER}
-							className={`w-full h-full min-h-30 bg-gray-800 flex items-center justify-center`}
-						>
-							<div className='pt-2 pl-2 pr-2 flex flex-wrap space-x-2'>
-								{userRankings.get(UNASSIGNED_TIER)?.map((item) => (
-									<RenderedItem key={item.id} item={item} />
-								))}
-							</div>
-						</DroppableArea>
-						<div
-							className={`flex flex-row bg-[${TIER_ROW_BG_COLOR}] border-b-4 border-l-4 border-r-4 border-black`}
-							style={{ height: mainContainerHeight }}
-						>
-							<div className='flex flex-col flex-3'>
-								{tierList.tiers.map((tier, index) => mapTierRows(tier, index))}
-							</div>
-							{isDisplayingAverage && (
-								<>
-									<AveragesDisplay tierList={tierList} allRankings={allRankings} />
-								</>
-							)}
-						</div>
+						{unassignedArea}
+						{rankingContainer}
 						<div className='flex flex-col sm:flex-row justify-center gap-4 mt-8'>
 							<Button onClick={saveRankings} disabled={isSaving}>
 								{isSaving ? 'Saving...' : 'Save Rankings'}
