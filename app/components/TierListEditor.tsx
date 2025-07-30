@@ -45,9 +45,14 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const { showPopup } = usePopup();
 	const { getUserName, fetchUserName } = useUserNames();
 
-	// Name and description of the tier list
+	// Settable tier list values
 	const [listName, setListName] = useState('');
 	const [listDescription, setListDescription] = useState('');
+	const [isPrivate, setIsPrivate] = useState(true);
+	const [creatorId, setCreatorId] = useState(user?.uid);
+	const [editorIds, setEditorIds] = useState<string[]>([]);
+	const [rankerIds, setRankerIds] = useState<string[]>([]);
+
 	// The current item we are trying to add
 	const [currentAddItem, setCurrentAddItem] = useState(createNewTierListItem());
 	// Items and tiers (tiers are started as defaults, items starts empty).
@@ -65,10 +70,10 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	// Id of the created tier list (so we don't re-create instead of overwriting).
 	const [listId, setListId] = useState(tierListId);
 	const [isLoadingTierList, setIsLoadingTierList] = useState(true);
-	const [creatorId, setCreatorId] = useState(user?.uid);
-	const [editorIds, setEditorIds] = useState<string[]>([]);
 
-	const [test, setTest] = useState(0);
+	// Trigger if we need to rerender
+	const rerender = () => _setRender(_render + 1);
+	const [_render, _setRender] = useState(0);
 
 	useEffect(() => {
 		if (isLoading || !user || !db) {
@@ -93,7 +98,12 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				setCreatorId(tierList.creatorId);
 				const editorIdArray = Array.from(tierList.editorIds);
 				setEditorIds(editorIdArray);
-				await Promise.all(editorIdArray.map((id) => fetchUserName(id)));
+				const rankerIdArray = Array.from(tierList.rankerIds);
+				setRankerIds(rankerIdArray);
+				await Promise.all([
+					...editorIdArray.map((id) => fetchUserName(id)),
+					...rankerIdArray.map((id) => fetchUserName(id)),
+				]);
 			} else {
 				throw Error('Unexpected error / tier list editor mode.');
 			}
@@ -153,11 +163,20 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		}
 
 		setIsSaving(true);
+		const filterIds = (ids: string[]) => {
+			return ids.filter((x) => x !== '' && x !== user.uid && typeof getUserName(x) === 'string');
+		};
+		const newEditorIds = filterIds(editorIds);
+		const newRankerIds = filterIds(rankerIds);
+		setEditorIds(newEditorIds);
+		setRankerIds(newRankerIds);
 
 		let newTierList = new TierList(
 			user.uid,
 			user.displayName || '',
-			new Set(editorIds),
+			isPrivate,
+			new Set(newEditorIds),
+			new Set(newRankerIds),
 			serverTimestamp() as Timestamp,
 			serverTimestamp() as Timestamp,
 			listName,
@@ -175,7 +194,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					showPopup('Tier list updated successfully!', 'success');
 					setIsSaving(false);
 					// If no longer an editor, leave the page.
-					if (!editorIds.includes(user.uid)) {
+					if (user.uid !== creatorId && !editorIds.includes(user.uid)) {
 						router.push('/dashboard');
 					}
 				}
@@ -200,9 +219,15 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		const newEditorIds = [...editorIds];
 		newEditorIds[index] = newEditorId;
 		setEditorIds(newEditorIds);
-		fetchUserName(newEditorId).then(() => {
-			setTest(test + 1);
-		});
+		fetchUserName(newEditorId).then(() => rerender());
+	};
+
+	const handleRankerIdsChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+		const newRankerId = e.target.value;
+		const newRankerIds = [...rankerIds];
+		newRankerIds[index] = newRankerId;
+		setRankerIds(newRankerIds);
+		fetchUserName(newRankerId).then(() => rerender());
 	};
 
 	const renderUserNameMessage = (userId: string) => {
@@ -217,12 +242,15 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		}
 	};
 
+	const editorContainerStyle =
+		'flex flex-1 flex-col bg-gray-50 rounded-lg border border-gray-200 mb-2';
+
 	const addEditorsDiv = (
-		<div className='flex flex-col bg-gray-50 rounded-lg border border-gray-200 mb-2'>
+		<div className={editorContainerStyle}>
 			<h2 className='text-center text-xl'>Add Editors</h2>
-			<div className='flex flex-col space-y-2 p-4'>
+			<div className='flex flex-col flex-1 space-y-2 p-4'>
 				{editorIds.map((userId, index) => (
-					<div key={index} className='flex items-center gap-2'>
+					<div key={index} className='flex items-center gap-2 ml-8'>
 						<i
 							className={`fas fa-trash trashcan-icon cursor-pointer ${
 								index === 0 ? 'invisible' : ''
@@ -247,6 +275,39 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				<div className='flex justify-center'>
 					<ActionButton variant='outline' onClick={() => setEditorIds([...editorIds, ''])}>
 						Add New Editor
+					</ActionButton>
+				</div>
+			</div>
+		</div>
+	);
+
+	const addRankersDiv = (
+		<div className={editorContainerStyle}>
+			<h2 className='text-center text-xl'>Add Rankers</h2>
+			<div className='flex flex-col flex-1 space-y-2 p-4'>
+				{rankerIds.map((userId, index) => (
+					<div key={index} className='flex items-center gap-2 ml-8'>
+						<i
+							className='fas fa-trash trashcan-icon cursor-pointer'
+							onClick={() => {
+								const newRankerIds = rankerIds.filter((_, i) => i !== index);
+								setRankerIds(newRankerIds);
+							}}
+						></i>
+						<Input
+							label=''
+							id={`user-${index}`}
+							value={userId}
+							onChange={(e) => handleRankerIdsChange(e, index)}
+							placeholder="Enter the user's ID"
+							additionalClassNames='flex-grow'
+						/>
+						{renderUserNameMessage(userId)}
+					</div>
+				))}
+				<div className='flex justify-center'>
+					<ActionButton variant='outline' onClick={() => setRankerIds([...rankerIds, ''])}>
+						Add New Ranker
 					</ActionButton>
 				</div>
 			</div>
@@ -300,15 +361,33 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					additionalClassNames='mb-2'
 				/>
 			)}
-			<Input
-				label='Tier List Name'
-				id='listName'
-				value={listName}
-				onChange={(e: { target: { value: SetStateAction<string> } }) => setListName(e.target.value)}
-				placeholder='e.g., Favorite Video Games'
-				disabled={!isCreator}
-				additionalClassNames='mb-2'
-			/>
+			<div className='flex justify-center items-center space-x-8'>
+				<Input
+					label='Tier List Name'
+					id='listName'
+					value={listName}
+					onChange={(e: { target: { value: SetStateAction<string> } }) =>
+						setListName(e.target.value)
+					}
+					placeholder='e.g., Favorite Video Games'
+					disabled={!isCreator}
+					additionalClassNames='mb-2'
+				/>
+				<div className='flex items-center gap-4'>
+					<span className='text-sm font-medium'>Public</span>
+					<label className='relative inline-flex items-center cursor-pointer'>
+						<input
+							type='checkbox'
+							className='sr-only peer'
+							checked={isPrivate}
+							onChange={() => setIsPrivate(!isPrivate)}
+						/>
+						<div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+					</label>
+					<span className='text-sm font-medium'>Private</span>
+				</div>
+			</div>
+
 			<Input
 				label='Description'
 				id='listDescription'
@@ -320,7 +399,9 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				disabled={!isCreator}
 				additionalClassNames='mb-2'
 			/>
-			{addEditorsDiv}
+			<div className='flex justify-center space-x-4'>
+				{addEditorsDiv} {addRankersDiv}
+			</div>
 			{addItemDiv}
 
 			{/* Item Bank */}

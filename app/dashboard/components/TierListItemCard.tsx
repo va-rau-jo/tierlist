@@ -68,8 +68,14 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 
 	const handleShareOnClick = () => {
 		navigator.clipboard.writeText(tierList.id);
-		showPopup(`Copied tierlist ID ${tierList.id}.`, 'info', 1000);
+		showPopup(
+			`Add them as a ranker, and have them join using ID: ${tierList.id} (copied).`,
+			'info',
+			5000
+		);
 	};
+
+	const canEdit = tierList.creatorId === user.uid || tierList.editorIds.has(user.uid);
 
 	return (
 		<div className='relative bg-white/50 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden w-full'>
@@ -106,7 +112,7 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 					</div>
 					{/* Actions like View, Edit, Share */}
 					<div className='flex my-auto w-full pl-4 py-1 justify-center space-x-4'>
-						{tierList.editorIds.has(user.uid) && (
+						{canEdit && (
 							<ActionButtonContainer>
 								<Link href={`/dashboard/edit/${tierList.id}`}>
 									<ActionButton variant='outline'>Edit</ActionButton>

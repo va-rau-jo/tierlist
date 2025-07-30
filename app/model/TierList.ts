@@ -9,14 +9,21 @@ export type TierListRankings = Map<string, TierListItemModel[]>;
 export type TierListUserRankings = Map<string, TierListRankings>;
 
 export class TierList {
+	// NOTE: When adding a field that can be updated after the tierlist is
+	// created, update firebase_utils.updateTierList
+
 	// Id of the tier list
 	id: string;
 	// User id of the creator
 	creatorId: string;
 	// Name of the creator.
 	creatorName: string;
+	// Whether the tierlist is private
+	isPrivate: boolean;
 	// Ids of allowed editors
 	editorIds: Set<string>;
+	// Ids of allowed rankers
+	rankerIds: Set<string>;
 	// Created timestamp
 	createdAt: Timestamp;
 	// Updated timestamp
@@ -36,7 +43,9 @@ export class TierList {
 	constructor(
 		creatorId: string,
 		creatorName: string,
+		isPrivate: boolean,
 		editorIds: Set<string>,
+		rankerIds: Set<string>,
 		createdAt: Timestamp,
 		lastUpdatedAt: Timestamp,
 		listName: string,
@@ -48,7 +57,9 @@ export class TierList {
 		this.id = '';
 		this.creatorId = creatorId;
 		this.creatorName = creatorName;
+		this.isPrivate = isPrivate;
 		this.editorIds = editorIds;
+		this.rankerIds = rankerIds;
 		this.createdAt = createdAt;
 		this.lastUpdatedAt = lastUpdatedAt;
 		this.name = listName;
@@ -63,7 +74,9 @@ export class TierList {
 			id: this.id,
 			creatorId: this.creatorId,
 			creatorName: this.creatorName,
+			isPrivate: this.isPrivate,
 			editorIds: Array.from(this.editorIds),
+			rankerIds: Array.from(this.rankerIds),
 			createdAt: this.createdAt,
 			lastUpdatedAt: this.lastUpdatedAt,
 			name: this.name,
@@ -125,7 +138,9 @@ export class TierList {
 		const tierlist = new TierList(
 			obj.creatorId,
 			obj.creatorName,
+			obj.isPrivate,
 			new Set(obj.editorIds),
+			new Set(obj.rankerIds),
 			obj.createdAt,
 			obj.lastUpdatedAt,
 			obj.name,

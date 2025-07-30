@@ -59,7 +59,6 @@ export const addTierList = async (
 	const tierListObj = newTierList.toFirebaseObject();
 	try {
 		await setDoc(newTierListDocRef, tierListObj);
-		await updateEditorUserTierLists(newTierList.id, newTierList.editorIds, db);
 		return newTierList;
 	} catch (error) {
 		console.error('Error creating tierlist:', error);
@@ -83,8 +82,10 @@ export const updateTierList = async (
 	const updateFields = {
 		lastUpdatedAt: serverTimestamp(),
 		name: newTierList.name,
+		isPrivate: newTierList.isPrivate,
 		description: newTierList.description,
 		editorIds: Array.from(newTierList.editorIds),
+		rankerIds: Array.from(newTierList.rankerIds),
 		tiers: newTierList.tiers.map((tier: Tier) => ({
 			id: tier.id,
 			name: tier.name,
@@ -98,7 +99,6 @@ export const updateTierList = async (
 	};
 
 	await updateDoc(tierListRef, { ...updateFields });
-	await updateEditorUserTierLists(existingTierListId, newTierList.editorIds, db);
 	return FirebaseReturnStatus.OK;
 };
 
@@ -130,16 +130,18 @@ export const joinTierList = async (
 	 * @param userId - The ID of the usrer.
 	 * @param db - The Firebase database object.
 	 */
-	const tierListRef = doc(db, `users/${userId}/tierlists`, tierListId);
-	const tierListSnap = await getDoc(tierListRef);
 
-	// Check if the tierlist exists first
+	// Check if the tierlist exists first and user has access.
+	// If the user is not a ranker, they will not be able to access this.
 	const tierListDocRef = doc(db, TIERLIST_COLLECTION_NAME, tierListId);
-	const tierListDocSnap = await getDoc(tierListDocRef);
-	if (!tierListDocSnap.exists()) {
+	try {
+		await getDoc(tierListDocRef);
+	} catch {
 		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
 	}
 
+	const tierListRef = doc(db, `users/${userId}/tierlists`, tierListId);
+	const tierListSnap = await getDoc(tierListRef);
 	// Only add if it doesn't exist yet
 	if (!tierListSnap.exists()) {
 		await setDoc(tierListRef, {
@@ -164,11 +166,10 @@ export const leaveTierList = async (
 	 * @param userId - The ID of the user.
 	 * @param db - The Firebase database object.
 	 */
-	// Remove tierlist from user's list
 	const userTierListDoc = doc(db, `users/${userId}/tierlists`, tierListId);
 	await deleteDoc(userTierListDoc);
 
-	// Remove user's rankings
+	// Remove user's rankings from tierlist's rankings list
 	const tierListRef = doc(db, TIERLIST_COLLECTION_NAME, tierListId);
 	const tierListDoc = await getDoc(tierListRef);
 
@@ -177,10 +178,10 @@ export const leaveTierList = async (
 	}
 
 	const currentRankings = tierListDoc.data().userRankings || {};
-	// Remove this user's rankings
-	delete currentRankings[userId];
-	await updateDoc(tierListRef, { rankings: currentRankings });
-
+	if (currentRankings[userId]) {
+		delete currentRankings[userId];
+		await updateDoc(tierListRef, { rankings: currentRankings });
+	}
 	return FirebaseReturnStatus.OK;
 };
 
@@ -204,23 +205,6 @@ export const deleteTierList = async (
 		await deleteDoc(doc(db, TIERLIST_COLLECTION_NAME, tierListId));
 	} catch {
 		return FirebaseReturnStatus.TIER_LIST_NOT_DELETED_ERROR;
-	}
-	return FirebaseReturnStatus.OK;
-};
-
-const updateEditorUserTierLists = async (
-	tierListId: string,
-	editorIds: Set<string>,
-	db: ReturnType<typeof getFirestore>
-): Promise<FirebaseReturnStatus> => {
-	/**
-	 * Updates the user profiles of all editors to include the new tier list.
-	 * This function adds the tier list ID to each editor's list of tier lists in
-	 * their user profile.
-	 */
-	// Remove duplicates
-	for (const editorId of editorIds) {
-		await joinTierList(tierListId, editorId, db);
 	}
 	return FirebaseReturnStatus.OK;
 };
@@ -330,6 +314,9 @@ export const getUserTierLists = async (
 	 * @returns A Promise of an array of TierLists.
 	 */
 	// Fetch list of ids that the user has stored as joined tier lists.
+	console.log('AUTH2');
+	console.log(userId);
+
 	const userTierListsRef = collection(db, `users/${userId}/tierlists`);
 	const userTierListsSnapshot = await getDocs(userTierListsRef);
 	const userTierListIds = userTierListsSnapshot.docs.map((doc) => doc.data().tierListId);
