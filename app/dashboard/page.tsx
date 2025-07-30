@@ -134,7 +134,7 @@ const DashboardPage: React.FC = () => {
 							No tierlists found. Create one to get started!
 						</p>
 					) : (
-						<div className='w-full space-y-2 px-16'>
+						<div className='flex flex-col items-center w-full space-y-2 px-16'>
 							{userCreatedTierLists.map((tierList: TierList) => (
 								<TierListItemCard
 									key={tierList.id}
