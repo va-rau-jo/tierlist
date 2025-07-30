@@ -2,12 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useFirebase } from '@/app/firebase/FirebaseProvider';
+import { useFirebase } from '@/app/components/providers/FirebaseProvider';
 import { Button } from '@/app/components/Button';
 import {
 	FirebaseReturnStatus,
 	getTierList,
-	getUserIdsToNamesMap,
 	shouldRedirectToLogin,
 	updateTierListRankings,
 } from '@/app/firebase/firebase_utils';
@@ -16,12 +15,12 @@ import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
 import NavBar from '@/app/components/NavBar';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { TierRow } from '@/app/dashboard/rank/components/TierRow';
-import { TierList, TierListRankings, TierListUserRankings } from '@/app/model/TierList';
+import { TierList, TierListUserRankings } from '@/app/model/TierList';
 import { useRouter } from 'next/navigation';
 import { TIER_ROW_BG_COLOR, TIER_ROW_HEIGHT } from '@/app/constants';
 import { AveragesDisplay } from '../components/AveragesDisplay';
-import { usePopup } from '@/app/components/popup/PopupContext';
-import { PageBody } from '@/app/components/PageBody';
+import { usePopup } from '@/app/components/providers/PopupProvider';
+import { Page, PageBody } from '@/app/components/Page';
 import { DroppableArea } from '../components/DroppableArea';
 import RenderedItem from '@/app/dashboard/rank/components/RenderedItem';
 import { RankingPageHeader } from '../components/RankingPageHeader';
@@ -37,8 +36,6 @@ const RankPage: React.FC = () => {
 	const tierListId = useParams().id?.toString();
 	const [tierList, setTierList] = useState<TierList | null>(null);
 
-	// Maps user ID to the user's name
-	const [userIdToNameMap, setUserIdToNameMap] = useState<Map<string, string>>();
 	// Replaces save button if we are saving.
 	const [isSaving, setIsSaving] = useState(false);
 	// Maps user ID to TierListRankings: Tier ID: list of tier list items
@@ -47,8 +44,13 @@ const RankPage: React.FC = () => {
 	const [displayedTierListRankings, setDisplayedTierListRankings] = useState<TierListUserRankings>(
 		new Map()
 	);
+	// Whether we are displaying the average display.
 	const [isDisplayingAverage, setIsDisplayingAverage] = useState(false);
+	// Tracks the currently dragged item
+	// (hides the original for seamless dragging).
 	const [activeItemId, setActiveItemId] = useState<string | null>();
+	// Tracks the user selected item size, defaults to
+	const [itemSize, setItemSize] = useState(15);
 
 	const activeItem = useMemo(() => {
 		if (activeItemId && user) {
@@ -79,39 +81,34 @@ const RankPage: React.FC = () => {
 			// User and DB are confirmed not null
 			setIsLoadingTierList(true); // This update should *not* be a dependency
 
-			try {
-				const tierList = await getTierList(tierListId, db);
-				if (tierList === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
-					router.push('/dashboard');
-					return;
-				}
-				setTierList(tierList);
-
-				let userRankingSet = false;
-				if (tierList.userRankings) {
-					// All other user IDs who have ranked the tier list.
-					const userIds = Array.from(tierList.userRankings.keys());
-					setUserIdToNameMap(await getUserIdsToNamesMap(new Set(userIds), db));
-					const userRanking = tierList.userRankings.get(user.uid);
-					if (userRanking) {
-						// We will set the current user's rankings since it exists.
-						userRankingSet = true;
-					}
-				}
-				if (!userRankingSet) {
-					// Default to creating a new map.
-					const newMap = new Map<string, TierListItemModel[]>(
-						tierList.tiers.map((tier) => [tier.id, []])
-					);
-					newMap.set(UNASSIGNED_TIER, tierList.items);
-					tierList.userRankings.set(user.uid, newMap);
-				}
-				setTierListRankings(tierList.userRankings);
-			} finally {
-				setIsLoadingTierList(false);
+			const tierList = await getTierList(tierListId, db);
+			if (tierList === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
+				router.push('/dashboard');
+				return;
 			}
-		};
+			setTierList(tierList);
 
+			let userRankingSet = false;
+			if (tierList.userRankings) {
+				// All other user IDs who have ranked the tier list.
+				const userIds = Array.from(tierList.userRankings.keys());
+				const userRanking = tierList.userRankings.get(user.uid);
+				if (userRanking) {
+					// We will set the current user's rankings since it exists.
+					userRankingSet = true;
+				}
+			}
+			if (!userRankingSet) {
+				// Default to creating a new map.
+				const newMap = new Map<string, TierListItemModel[]>(
+					tierList.tiers.map((tier) => [tier.id, []])
+				);
+				newMap.set(UNASSIGNED_TIER, tierList.items);
+				tierList.userRankings.set(user.uid, newMap);
+			}
+			setTierListRankings(tierList.userRankings);
+			setIsLoadingTierList(false);
+		};
 		fetchTierList();
 	}, [
 		db,
@@ -139,7 +136,8 @@ const RankPage: React.FC = () => {
 	}
 
 	const userRankings = tierListRankings.get(user.uid);
-	if (!userRankings || !userIdToNameMap) {
+	console.log(tierListRankings);
+	if (!userRankings) {
 		return;
 	}
 
@@ -212,16 +210,16 @@ const RankPage: React.FC = () => {
 	};
 
 	const toggleUserRankingsDiv = (
-		<div>
-			{tierListRankings && userIdToNameMap && (
-				<div className='flex flex-col items-center mb-4 p-4 bg-gray-100 rounded-lg'>
+		<>
+			{tierListRankings && (
+				<div className='flex flex-col flex-1 items-center mb-4 p-4 bg-gray-100 rounded-lg'>
 					<span className='font-semibold mb-2 w-fit'>Show Other Rankings</span>
 					<div className='space-y-2'>
 						{Array.from(tierListRankings)
 							.filter(([userId]) => userId !== user.uid)
 							.map(([userId]) => (
 								<div key={userId}>
-									<span className='text-sm font-medium'>{userIdToNameMap.get(userId)}</span>
+									{/* <span className='text-sm font-medium'>{userIdToNameMap.get(userId)}</span> */}
 									<input
 										type='checkbox'
 										className='ml-2'
@@ -242,7 +240,33 @@ const RankPage: React.FC = () => {
 					</div>
 				</div>
 			)}
-		</div>
+		</>
+	);
+
+	const displaySettingsDiv = (
+		<>
+			{tierListRankings && (
+				<div className='flex flex-col flex-1 items-center mb-4 p-4 bg-gray-100 rounded-lg'>
+					<span className='font-semibold mb-2 w-fit'>Display Settings</span>
+					<div className='space-y-2'>
+						<div className='flex'>
+							<span className='text-sm font-medium'>Item Size</span>
+							<input
+								type='range'
+								min={10}
+								max={25}
+								defaultValue={15}
+								className='ml-2'
+								onChange={(e) => {
+									console.log(e.target.value);
+									setItemSize(Number(e.target.value));
+								}}
+							/>
+						</div>
+					</div>
+				</div>
+			)}
+		</>
 	);
 
 	const handleRankingCheckedChange = (userId: string) => {
@@ -281,7 +305,8 @@ const RankPage: React.FC = () => {
 		for (const [userId, rankingMap] of displayedTierListRankings.entries()) {
 			for (const [tierId, items] of rankingMap) {
 				if (tierId === tier.id) {
-					const userName = userIdToNameMap.get(userId)!;
+					const userName = 'NAME';
+					// const userName = userIdToNameMap.get(userId)!;
 					const newItems = [];
 					let test = '';
 					for (let i = 0; i < 20; i++) {
@@ -298,7 +323,7 @@ const RankPage: React.FC = () => {
 			}
 		}
 		console.log(allItems);
-		return <TierRow key={tier.id} tier={tier} index={index} items={allItems} />;
+		return <TierRow key={tier.id} tier={tier} index={index} items={allItems} itemSize={itemSize} />;
 	};
 
 	const unassignedArea = (
@@ -308,7 +333,7 @@ const RankPage: React.FC = () => {
 		>
 			<div className='pt-2 pl-2 pr-2 flex flex-wrap space-x-2'>
 				{userRankings.get(UNASSIGNED_TIER)?.map((item) => (
-					<RenderedItem key={item.id} item={item} />
+					<RenderedItem key={item.id} item={item} size={itemSize} isDraggable={true} />
 				))}
 			</div>
 		</DroppableArea>
@@ -333,29 +358,34 @@ const RankPage: React.FC = () => {
 	);
 
 	return (
-		<PageBody>
+		<Page>
 			<DndContext
 				onDragStart={handleDragStart}
 				onDragEnd={handleDragEnd}
 				onDragCancel={handleDragCancel}
 			>
 				<NavBar />
-				<div>
-					<div className='bg-white px-8 pt-2 rounded-lg shadow-xl max-w-5xl mx-auto'>
-						<RankingPageHeader tierList={tierList} userId={user.uid} />
+				<PageBody>
+					<RankingPageHeader tierList={tierList} userId={user.uid} />
+					<div className='flex w-full space-x-8'>
 						{toggleUserRankingsDiv}
-						{unassignedArea}
-						{rankingContainer}
-						<div className='flex flex-col sm:flex-row justify-center gap-4 mt-8'>
-							<Button onClick={saveRankings} disabled={isSaving}>
-								{isSaving ? 'Saving...' : 'Save Rankings'}
-							</Button>
-						</div>
+						{displaySettingsDiv}
 					</div>
-				</div>
-				<DragOverlay>{activeItem ? <RenderedItem item={activeItem} /> : null}</DragOverlay>
+					{unassignedArea}
+					{rankingContainer}
+					<div className='flex flex-col sm:flex-row justify-center gap-4 mt-8'>
+						<Button onClick={saveRankings} disabled={isSaving}>
+							{isSaving ? 'Saving...' : 'Save Rankings'}
+						</Button>
+					</div>
+				</PageBody>
+				<DragOverlay>
+					{activeItem ? (
+						<RenderedItem item={activeItem} size={itemSize} isDraggable={true} />
+					) : null}
+				</DragOverlay>
 			</DndContext>
-		</PageBody>
+		</Page>
 	);
 };
 

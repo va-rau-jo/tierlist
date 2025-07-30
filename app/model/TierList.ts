@@ -96,11 +96,11 @@ export class TierList {
 		const items = obj.items.map((i: any) => new TierListItemModel(i.id, i.name, i.imageUrl));
 
 		const userRankings = new Map<string, TierListRankings>();
-		// Convert obj.rankings to a map of TierListUserRankings
+		// Convert obj.userRankings to a map of TierListUserRankings
 		// Firebase only stores objects, so iterate over the object keys / values
-		if (obj.rankings && Object.keys(obj.rankings).length > 0) {
+		if (obj.userRankings && Object.keys(obj.userRankings).length > 0) {
 			// Key: user ID, Value: array of TierListRankings
-			Object.entries(obj.rankings).forEach(([userId, userRanking]: [string, any]) => {
+			Object.entries(obj.userRankings).forEach(([userId, userRanking]: [string, any]) => {
 				const rankings = new Map<string, TierListItemModel[]>();
 				// Key: Tier list ID, Value: TierListItem ID
 				// Add all ranked items (does not include unassigned items)

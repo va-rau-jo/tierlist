@@ -5,9 +5,9 @@ import { TierList } from '../../model/TierList';
 import { ActionButton } from '../../components/Button';
 import Link from 'next/link';
 import { getInitials, truncateText } from '../../utils';
-import { useFirebase } from '@/app/firebase/FirebaseProvider';
+import { useFirebase } from '@/app/components/providers/FirebaseProvider';
 import { deleteTierList, FirebaseReturnStatus, leaveTierList } from '@/app/firebase/firebase_utils';
-import { usePopup } from '@/app/components/popup/PopupContext';
+import { usePopup } from '@/app/components/providers/PopupProvider';
 
 interface TierListItemCardProps {
 	tierList: TierList;
@@ -39,12 +39,15 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 
 	const handleDeleteOnClick = () => {
 		setDeleteButtonText('Deleting...');
-		deleteTierList(tierList.id, db).then((status) => {
-			if (status === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
-				showPopup('Error deleting the tierlist.', 'error');
-			} else {
+		deleteTierList(tierList.id, user.uid, db).then((status) => {
+			if (status === FirebaseReturnStatus.OK) {
 				refreshCallback();
 				showPopup('Tierlist deleted.', 'success');
+			} else if (status === FirebaseReturnStatus.TIER_LIST_NOT_DELETED_ERROR) {
+				showPopup('Error deleting the tierlist.', 'error');
+			} else {
+				console.log('Error deleting tierlist: ' + status);
+				showPopup('Something went wrong.', 'error');
 			}
 			setDeleteButtonText('Delete');
 		});

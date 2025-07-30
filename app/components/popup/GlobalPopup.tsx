@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { usePopup } from './PopupContext';
+import { usePopup } from '../providers/PopupProvider';
 
 const GlobalPopup = () => {
 	const { popup } = usePopup();

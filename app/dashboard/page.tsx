@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '../firebase/FirebaseProvider';
+import { useFirebase } from '../components/providers/FirebaseProvider';
 import { ActionButton } from '../components/Button';
 import {
 	FirebaseReturnStatus,
@@ -15,8 +15,8 @@ import TierListItemCard from './components/TierListItemCard';
 import NavBar from '../components/NavBar';
 import Link from 'next/link';
 import { Input } from '../components/Input';
-import { usePopup } from '../components/popup/PopupContext';
-import { PageBody } from '../components/PageBody';
+import { usePopup } from '../components/providers/PopupProvider';
+import { Page } from '../components/Page';
 
 // Displays the create and join actions at the top of the page.
 const ActionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -27,6 +27,8 @@ const ActionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 	);
 };
 
+const joinDefaultText = 'Join Tierlist';
+
 const DashboardPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
 	const { showPopup } = usePopup();
@@ -34,6 +36,7 @@ const DashboardPage: React.FC = () => {
 	const [userTierLists, setUserTierLists] = React.useState<TierList[]>([]);
 	const [joinTierListId, setJoinTierListId] = React.useState('');
 	const [isLoadingTierLists, setIsLoadingTierLists] = React.useState(true);
+	const [joinTierListText, setJoinTierListText] = React.useState(joinDefaultText);
 
 	useEffect(() => {
 		// User and DB are confirmed not null
@@ -71,6 +74,7 @@ const DashboardPage: React.FC = () => {
 
 	const joinTierListOnClick = () => {
 		if (joinTierListId) {
+			setJoinTierListText('Joining...');
 			joinTierList(joinTierListId, user.uid, db).then((status) => {
 				if (status === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
 					showPopup(`Tierlist ${joinTierListId} was not found.`, 'error');
@@ -80,6 +84,7 @@ const DashboardPage: React.FC = () => {
 				} else {
 					refreshTierLists();
 				}
+				setJoinTierListText(joinDefaultText);
 			});
 		} else {
 			showPopup('Tierlist ID cannot be empty.', 'error');
@@ -93,9 +98,9 @@ const DashboardPage: React.FC = () => {
 	};
 
 	return (
-		<PageBody className='flex flex-col items-center'>
+		<Page className='flex flex-col items-center'>
 			<NavBar />
-			<div className='flex justify-center items-center flex-1 flex-col px-8 mt-16 max-w-4xl'>
+			<div className='flex justify-center items-center flex-1 flex-col px-8 mt-16 max-w-5xl'>
 				<section className='flex w-full h-25 space-x-2 justify-center items-center'>
 					<ActionHeader>
 						<span className='text-xl w-fit h-fit text-center'> Create your own tierlist! </span>
@@ -117,7 +122,7 @@ const DashboardPage: React.FC = () => {
 								className='w-full p-2 border border-black rounded-md shadow-sm focus:border-indigo-500 sm:text-sm'
 							/>
 							<ActionButton onClick={joinTierListOnClick} variant='primary' className='h-fit'>
-								Join Tierlist
+								{joinTierListText}
 							</ActionButton>
 						</div>
 					</ActionHeader>
@@ -148,7 +153,7 @@ const DashboardPage: React.FC = () => {
 					)}
 				</section>
 			</div>
-		</PageBody>
+		</Page>
 	);
 };
 

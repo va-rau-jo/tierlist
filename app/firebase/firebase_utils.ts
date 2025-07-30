@@ -16,11 +16,22 @@ import { Tier, UNASSIGNED_TIER } from '../model/Tier';
 import { TierListItemModel } from '../model/TierListItem';
 import { User } from 'firebase/auth';
 
+const TIERLIST_COLLECTION_NAME = 'tierlists';
+const USER_COLLECTION_NAME = 'users';
+
+const getUserPublicDetailsPath = (userId: string) => {
+	return `users/${userId}/publicProfile/details`;
+};
+
 export const enum FirebaseReturnStatus {
 	OK,
 	TIERLIST_NOT_FOUND_ERROR,
+	TIERLIST_NOT_CREATED_ERROR,
+	TIERLIST_NOT_LEFT_ERROR,
+	TIER_LIST_NOT_DELETED_ERROR,
 	ALREADY_JOINED_TIERLIST_ERROR,
 	USER_ALREADY_EXISTS_ERROR,
+	USER_NOT_FOUND_ERROR,
 }
 
 export const shouldRedirectToLogin = (
@@ -32,20 +43,28 @@ export const shouldRedirectToLogin = (
 	return !isLoading && (!user || !db);
 };
 
-export const addTierList = async (newTierList: TierList, db: ReturnType<typeof getFirestore>) => {
+export const addTierList = async (
+	newTierList: TierList,
+	db: ReturnType<typeof getFirestore>
+): Promise<TierList | FirebaseReturnStatus> => {
 	/**
 	 * Saves a TierList object to Firebase.
 	 * @param newTierList - TierList object to be saved.
 	 * @param db - The Firebase database object.
 	 *
-	 * @returns the updated tier list object.
+	 * @returns the updated tier list object or a firebase error.
 	 */
-	const newTierListDocRef = doc(collection(db, 'tierlist'));
+	const newTierListDocRef = doc(collection(db, TIERLIST_COLLECTION_NAME));
 	newTierList.id = newTierListDocRef.id;
 	const tierListObj = newTierList.toFirebaseObject();
-	await setDoc(newTierListDocRef, tierListObj);
-	await updateEditorUserTierLists(newTierList.id, newTierList.editorIds, db);
-	return newTierList;
+	try {
+		await setDoc(newTierListDocRef, tierListObj);
+		await updateEditorUserTierLists(newTierList.id, newTierList.editorIds, db);
+		return newTierList;
+	} catch (error) {
+		console.error('Error creating tierlist:', error);
+		return FirebaseReturnStatus.TIERLIST_NOT_CREATED_ERROR;
+	}
 };
 
 export const updateTierList = async (
@@ -59,7 +78,7 @@ export const updateTierList = async (
 	 * @param newTierList - Updated TierList object.
 	 * @param db - The Firebase database object.
 	 */
-	const tierListRef = doc(db, 'tierlist', existingTierListId);
+	const tierListRef = doc(db, TIERLIST_COLLECTION_NAME, existingTierListId);
 
 	const updateFields = {
 		lastUpdatedAt: serverTimestamp(),
@@ -91,12 +110,13 @@ export const getTierList = async (tierListId: string, db: ReturnType<typeof getF
 	 * @returns A Promise of a TierList object. Returns null if there was an
 	 * error.
 	 */
-	const tierListRef = doc(db, 'tierlist', tierListId);
+	const tierListRef = doc(db, TIERLIST_COLLECTION_NAME, tierListId);
 	const tierListDoc = await getDoc(tierListRef);
-	if (tierListDoc.exists()) {
-		return TierList.fromFirebase(tierListDoc.data());
+	if (!tierListDoc.exists()) {
+		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
 	}
-	return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
+	const tierList = TierList.fromFirebase(tierListDoc.data());
+	return tierList;
 };
 
 export const joinTierList = async (
@@ -114,7 +134,7 @@ export const joinTierList = async (
 	const tierListSnap = await getDoc(tierListRef);
 
 	// Check if the tierlist exists first
-	const tierListDocRef = doc(db, 'tierlist', tierListId);
+	const tierListDocRef = doc(db, TIERLIST_COLLECTION_NAME, tierListId);
 	const tierListDocSnap = await getDoc(tierListDocRef);
 	if (!tierListDocSnap.exists()) {
 		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
@@ -149,15 +169,14 @@ export const leaveTierList = async (
 	await deleteDoc(userTierListDoc);
 
 	// Remove user's rankings
-	const tierListRef = doc(db, 'tierlist', tierListId);
+	const tierListRef = doc(db, TIERLIST_COLLECTION_NAME, tierListId);
 	const tierListDoc = await getDoc(tierListRef);
 
 	if (!tierListDoc.exists()) {
 		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
 	}
 
-	const currentRankings = tierListDoc.data().rankings || {};
-	console.log(currentRankings);
+	const currentRankings = tierListDoc.data().userRankings || {};
 	// Remove this user's rankings
 	delete currentRankings[userId];
 	await updateDoc(tierListRef, { rankings: currentRankings });
@@ -167,34 +186,26 @@ export const leaveTierList = async (
 
 export const deleteTierList = async (
 	tierListId: string,
+	userId: string,
 	db: ReturnType<typeof getFirestore>
 ): Promise<FirebaseReturnStatus> => {
 	/**
-	 * Deletes a tier list and removes it from all users tierlist lists
+	 * Deletes a tier list from the tierlists collection, and removes it from this
+	 * user's list of tier lists
 	 * @param tierListId - The ID of the tier list to delete
 	 * @param db - The Firebase database object
 	 */
-
 	try {
-		// Get all users
-		const userDocs = await getDocs(collection(db, 'users'));
-
-		// Delete tierlist reference from each user's tierlists collection
-		const deletionPromises = userDocs.docs.map(async (userDoc) => {
-			const userTierListsRef = collection(db, `users/${userDoc.id}/tierlists`);
-			const userTierListQuery = query(userTierListsRef, where('tierListId', '==', tierListId));
-			const userTierListDocs = await getDocs(userTierListQuery);
-
-			return Promise.all(userTierListDocs.docs.map((doc) => setDoc(doc.ref, {}, { merge: true })));
-		});
-		// Wait for all user updates to complete
-		await Promise.all(deletionPromises);
-		// Finally delete the actual tierlist document
-		await deleteDoc(doc(db, 'tierlist', tierListId));
-		return FirebaseReturnStatus.OK;
+		await leaveTierList(tierListId, userId, db);
 	} catch {
-		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
+		return FirebaseReturnStatus.TIERLIST_NOT_LEFT_ERROR;
 	}
+	try {
+		await deleteDoc(doc(db, TIERLIST_COLLECTION_NAME, tierListId));
+	} catch {
+		return FirebaseReturnStatus.TIER_LIST_NOT_DELETED_ERROR;
+	}
+	return FirebaseReturnStatus.OK;
 };
 
 const updateEditorUserTierLists = async (
@@ -226,14 +237,14 @@ export const updateTierListRankings = async (
 	 * @param rankings - The new rankings of the tier list.
 	 * @param db - The Firebase database object.
 	 */
-	const tierListRef = doc(db, 'tierlist', tierListId);
+	const tierListRef = doc(db, TIERLIST_COLLECTION_NAME, tierListId);
 	const tierListDoc = await getDoc(tierListRef);
 
 	if (!tierListDoc.exists()) {
 		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
 	}
 
-	const currentRankings = tierListDoc.data().rankings || {};
+	const currentRankings = tierListDoc.data().userRankings || {};
 	// Skip unassigned items
 	const firebaseCompatibleRanking = Object.fromEntries(
 		new Map(
@@ -246,7 +257,7 @@ export const updateTierListRankings = async (
 		...currentRankings,
 		[userId]: firebaseCompatibleRanking,
 	};
-	await updateDoc(tierListRef, { rankings: updatedRankings });
+	await updateDoc(tierListRef, { userRankings: updatedRankings });
 	return FirebaseReturnStatus.OK;
 };
 
@@ -261,20 +272,51 @@ export const addUser = async (
 	 * @param name - The name of the user.
 	 * @param db - The Firebase database object.
 	 */
-	const usersRef = doc(db, 'users', userId);
-	const userDoc = await getDoc(usersRef);
+	const userDoc = doc(db, USER_COLLECTION_NAME, userId);
 
-	if (userDoc.exists()) {
-		console.log('User already added.');
-		return FirebaseReturnStatus.USER_ALREADY_EXISTS_ERROR;
-	}
+	const publicProfileCollection = collection(userDoc, 'publicProfile');
+	const publicProfileDoc = doc(publicProfileCollection, 'details');
 
-	await setDoc(usersRef, {
-		userId: userId,
+	await setDoc(publicProfileDoc, {
 		name: name,
 		createdAt: serverTimestamp(),
 	});
+	await setDoc(userDoc, { id: userId }, { merge: true });
 	return FirebaseReturnStatus.OK;
+};
+
+export const removeDeletedTierlistRefs = async (
+	userTierListIds: string[],
+	userId: string,
+	db: ReturnType<typeof getFirestore>
+): Promise<string[]> => {
+	/**
+	 * Removes references to deleted tierlists from a user's tierlist collection.
+	 * Checks each tierlist ID and removes it from the user's collection if the
+	 * referenced tierlist no longer exists in the main tierlists collection.
+	 *
+	 * @param userTierListIds - Array of tierlist IDs to check
+	 * @param userId - ID of the user whose tierlist references are being cleaned
+	 * @param db - Firebase Firestore database instance
+	 * @returns Promise<string[]> Array of valid tierlist IDs that still exist
+	 */
+	const validTierListIds = [];
+	const checkAndDeletePromises = userTierListIds.map(async (tierListId) => {
+		const tierListRef = doc(db, TIERLIST_COLLECTION_NAME, tierListId);
+		const tierListDoc = await getDoc(tierListRef);
+
+		if (!tierListDoc.exists()) {
+			// Remove from user's tierlists if the tierlist doesn't exist
+			const userTierListRef = doc(db, `users/${userId}/tierlists`, tierListId);
+			await deleteDoc(userTierListRef);
+			return null;
+		}
+		return tierListId;
+	});
+
+	const results = await Promise.all(checkAndDeletePromises);
+	validTierListIds.push(...results.filter((id): id is string => id !== null));
+	return validTierListIds;
 };
 
 export const getUserTierLists = async (
@@ -296,34 +338,55 @@ export const getUserTierLists = async (
 		return [];
 	}
 
-	// Fetch tier lists where the tier list ID matches the user's tier list IDs.
-	const tierListsRef = collection(db, 'tierlist');
-	const tierListQuery = query(tierListsRef, where('__name__', 'in', userTierListIds));
-	const tierListDocs = await getDocs(tierListQuery);
+	const validTierListIds = await removeDeletedTierlistRefs(userTierListIds, userId, db);
+	if (validTierListIds.length === 0) {
+		return [];
+	}
 
-	// All user accessible tier lists
-	const tierLists = tierListDocs.docs.map((doc) => TierList.fromFirebase(doc.data()));
-	return tierLists;
+	const tierListsRef = collection(db, TIERLIST_COLLECTION_NAME);
+	const q = query(tierListsRef, where('__name__', 'in', validTierListIds));
+	return (await getDocs(q)).docs.map((doc) => TierList.fromFirebase(doc.data()));
 };
 
-export const getUserIdsToNamesMap = async (
+export const getUserNameFromUserId = async (
+	userId: string,
+	db: ReturnType<typeof getFirestore>
+): Promise<string | FirebaseReturnStatus> => {
+	const userDoc = doc(db, getUserPublicDetailsPath(userId));
+	const userSnapshot = await getDoc(userDoc);
+
+	if (!userSnapshot.exists()) {
+		return FirebaseReturnStatus.USER_NOT_FOUND_ERROR;
+	}
+
+	const userData = userSnapshot.data();
+	return userData.name;
+};
+
+export const getUserNamesFromUserIds = async (
 	userIdsSet: Set<string>,
 	db: ReturnType<typeof getFirestore>
-): Promise<Map<string, string>> => {
-	/**
-	 * Loads a map of user IDs to names from Firebase.
-	 * @param userIdsSet - The IDs of the users whose names should be loaded.
-	 * @param db - The Firebase database object.
-	 * @returns A Promise of a Map of user IDs to names.
-	 */
-	if (userIdsSet.size === 0) {
-		return new Map<string, string>();
-	}
-	const userRef = collection(db, 'users');
-	const userDocs = await getDocs(query(userRef, where('userId', 'in', Array.from(userIdsSet))));
+): Promise<Map<string, string | FirebaseReturnStatus>> => {
 	const userIdToNameMap = new Map<string, string>();
-	userDocs.forEach((doc) => {
-		userIdToNameMap.set(doc.data().userId, doc.data().name);
+	if (userIdsSet.size === 0) {
+		return userIdToNameMap;
+	}
+
+	const promises = Array.from(userIdsSet).map(async (userId) => {
+		const userDoc = doc(db, getUserPublicDetailsPath(userId));
+		const userSnapshot = await getDoc(userDoc);
+
+		if (!userSnapshot.exists()) {
+			return [userId, FirebaseReturnStatus.USER_NOT_FOUND_ERROR] as const;
+		}
+		const userData = userSnapshot.data();
+		return [userId, userData.name] as const;
 	});
+
+	const results = await Promise.all(promises);
+	results.forEach(([userId, name]) => {
+		userIdToNameMap.set(userId, name);
+	});
+
 	return userIdToNameMap;
 };

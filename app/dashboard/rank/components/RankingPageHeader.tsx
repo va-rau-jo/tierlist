@@ -1,5 +1,5 @@
 import { ActionButton } from '@/app/components/Button';
-import { usePopup } from '@/app/components/popup/PopupContext';
+import { usePopup } from '@/app/components/providers/PopupProvider';
 import { TierList } from '@/app/model/TierList';
 import Link from 'next/link';
 

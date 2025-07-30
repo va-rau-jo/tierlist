@@ -3,10 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { TierListEditor, TierListEditorMode } from '@/app/components/TierListEditor';
-import { useFirebase } from '@/app/firebase/FirebaseProvider';
+import { useFirebase } from '@/app/components/providers/FirebaseProvider';
 import { getTierList, shouldRedirectToLogin } from '@/app/firebase/firebase_utils';
 import NavBar from '@/app/components/NavBar';
-import { PageBody } from '@/app/components/PageBody';
+import { Page, PageBody } from '@/app/components/Page';
 
 const EditPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
@@ -44,12 +44,12 @@ const EditPage: React.FC = () => {
 	}
 
 	return (
-		<PageBody>
+		<Page>
 			<NavBar />
-			<div>
+			<PageBody>
 				<TierListEditor mode={TierListEditorMode.Edit} tierListId={tierListId} />
-			</div>
-		</PageBody>
+			</PageBody>
+		</Page>
 	);
 };
 

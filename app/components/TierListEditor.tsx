@@ -1,23 +1,23 @@
 import { SetStateAction, useEffect, useState } from 'react';
 import { ActionButton, Button } from './Button';
 import { Input } from './Input';
-import { useFirebase } from '../firebase/FirebaseProvider';
+import { useFirebase } from './providers/FirebaseProvider';
 import { TierListItemModel } from '../model/TierListItem';
 import {
 	addTierList,
 	getTierList,
 	updateTierList,
-	getUserIdsToNamesMap,
 	FirebaseReturnStatus,
 } from '../firebase/firebase_utils';
 import { TierList, TierListRankings } from '../model/TierList';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Tier } from '../model/Tier';
 import { generateUniqueId } from '../utils';
-import { TIER_ITEM_HEIGHT } from '../constants';
-import { usePopup } from './popup/PopupContext';
+import { DEFAULT_ITEM_SIZE, TIER_ITEM_HEIGHT } from '../constants';
+import { usePopup } from './providers/PopupProvider';
 import { useRouter } from 'next/navigation';
-import DraggableItem from '../dashboard/rank/components/RenderedItem';
+import RenderedItem from '../dashboard/rank/components/RenderedItem';
+import { useUserNames } from './providers/UserNamesProvider';
 
 enum TierListEditorMode {
 	Create,
@@ -43,6 +43,8 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const { db, isLoading, user } = useFirebase();
 	const router = useRouter();
 	const { showPopup } = usePopup();
+	const { getUserName, fetchUserName } = useUserNames();
+
 	// Name and description of the tier list
 	const [listName, setListName] = useState('');
 	const [listDescription, setListDescription] = useState('');
@@ -65,7 +67,8 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const [isLoadingTierList, setIsLoadingTierList] = useState(true);
 	const [creatorId, setCreatorId] = useState(user?.uid);
 	const [editorIds, setEditorIds] = useState<string[]>([]);
-	const [editorNames, setEditorNames] = useState<Map<string, string>>(new Map<string, string>());
+
+	const [test, setTest] = useState(0);
 
 	useEffect(() => {
 		if (isLoading || !user || !db) {
@@ -76,7 +79,8 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		const fetchTierList = async () => {
 			if (mode == TierListEditorMode.Create) {
 				setEditorIds([user.uid]);
-				setEditorNames(await getUserIdsToNamesMap(new Set([user.uid]), db));
+				// Set current user's name as editor
+				await fetchUserName(user.uid);
 			} else if (mode === TierListEditorMode.Edit && listId) {
 				const tierList = await getTierList(listId, db);
 				if (tierList === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
@@ -87,8 +91,9 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				setItems(tierList.items);
 				setTiers(tierList.tiers);
 				setCreatorId(tierList.creatorId);
-				setEditorIds(Array.from(tierList.editorIds));
-				setEditorNames(await getUserIdsToNamesMap(tierList.editorIds, db));
+				const editorIdArray = Array.from(tierList.editorIds);
+				setEditorIds(editorIdArray);
+				await Promise.all(editorIdArray.map((id) => fetchUserName(id)));
 			} else {
 				throw Error('Unexpected error / tier list editor mode.');
 			}
@@ -96,7 +101,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		};
 
 		fetchTierList();
-	}, [mode, listId, db, user, isLoading, router]);
+	}, [mode, listId, db, user, isLoading, router, fetchUserName]);
 
 	if (!user || !db) {
 		return null;
@@ -178,22 +183,38 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		} else {
 			// Create a new tier list, update Firebase set fields like tierlist id.
 			addTierList(newTierList, db).then((returnedTierList) => {
-				newTierList = returnedTierList;
-				showPopup('Tier list created successfully!', 'success');
+				if (returnedTierList === FirebaseReturnStatus.TIERLIST_NOT_CREATED_ERROR) {
+					showPopup('Tier list could not be created.', 'error');
+				} else if (returnedTierList instanceof TierList) {
+					newTierList = returnedTierList;
+					showPopup('Tier list created successfully!', 'success');
+					setListId(newTierList.id);
+				}
 				setIsSaving(false);
-				setListId(newTierList.id);
 			});
 		}
 	};
 
 	const handleEditorIdsChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+		const newEditorId = e.target.value;
 		const newEditorIds = [...editorIds];
-		newEditorIds[index] = e.target.value;
+		newEditorIds[index] = newEditorId;
 		setEditorIds(newEditorIds);
-
-		getUserIdsToNamesMap(new Set(newEditorIds), db).then((names) => {
-			setEditorNames(names);
+		fetchUserName(newEditorId).then(() => {
+			setTest(test + 1);
 		});
+	};
+
+	const renderUserNameMessage = (userId: string) => {
+		if (!userId) {
+			return null;
+		}
+		const userName = getUserName(userId);
+		if (typeof userName === 'string') {
+			return <span className='text-green-600'> {userName} </span>;
+		} else {
+			return <span className='text-red-500'> User Not Found </span>;
+		}
 	};
 
 	const addEditorsDiv = (
@@ -220,11 +241,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 							additionalClassNames='flex-grow'
 							disabled={index === 0}
 						/>
-						{editorNames.has(editorIds[index]) ? (
-							<span className='text-green-600'> {editorNames.get(editorIds[index])} </span>
-						) : editorIds[index] ? (
-							<span className='text-red-500'> User Not Found </span>
-						) : null}
+						{renderUserNameMessage(userId)}
 					</div>
 				))}
 				<div className='flex justify-center'>
@@ -271,7 +288,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const title = mode === TierListEditorMode.Create ? 'Create New Tier List' : 'Edit Tier List';
 
 	return (
-		<div className='bg-white p-8 rounded-lg shadow-xl mx-auto'>
+		<div>
 			<h2 className='text-3xl font-bold mb-6 text-center'>{title}</h2>
 			{listId && (
 				<Input
@@ -315,7 +332,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				) : (
 					<div className='pt-2 pl-2 pr-2 flex flex-wrap space-x-2'>
 						{items.map((item: TierListItemModel, index) => (
-							<DraggableItem key={index} item={item} isDraggable={false} />
+							<RenderedItem key={index} item={item} size={DEFAULT_ITEM_SIZE} isDraggable={false} />
 						))}
 					</div>
 				)}

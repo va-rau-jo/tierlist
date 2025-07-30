@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '../../firebase/FirebaseProvider';
+import { useFirebase } from '../../components/providers/FirebaseProvider';
 import { TierListEditor, TierListEditorMode } from '../../components/TierListEditor';
 import NavBar from '@/app/components/NavBar';
-import { PageBody } from '@/app/components/PageBody';
+import { Page, PageBody } from '@/app/components/Page';
 
 const CreatePage: React.FC = () => {
 	const { isLoading, user } = useFirebase();
@@ -25,12 +25,12 @@ const CreatePage: React.FC = () => {
 	}
 
 	return (
-		<PageBody>
+		<Page>
 			<NavBar />
-			<div>
+			<PageBody>
 				<TierListEditor mode={TierListEditorMode.Create} />
-			</div>
-		</PageBody>
+			</PageBody>
+		</Page>
 	);
 };
 

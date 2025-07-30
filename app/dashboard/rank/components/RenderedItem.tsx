@@ -10,16 +10,16 @@ import { CSS } from '@dnd-kit/utilities';
 import { useDraggable } from '@dnd-kit/core';
 import { TierListItem, TierListItemModel } from '../../../model/TierListItem';
 import Image from 'next/image';
+import { DEFAULT_ITEM_SIZE } from '@/app/constants';
 
-interface RenderedItemProps {
-	item: TierListItemModel;
-	isDraggable?: boolean;
-}
+const baseClasses = 'aspect-square flex items-center justify-center font-medium select-none';
 
-const baseClasses =
-	'w-15 h-15 aspect-square flex items-center justify-center text-sm font-medium select-none';
+const UndraggableItem = (item: TierListItemModel, size: number) => {
+	const itemStyle = {
+		height: `calc(var(--spacing) * ${size})`,
+		width: `calc(var(--spacing) * ${size})`,
+	};
 
-const UndraggableItem = (item: TierListItemModel) => {
 	let imageDiv = null;
 	if (item.imageUrl) {
 		imageDiv = (
@@ -28,18 +28,30 @@ const UndraggableItem = (item: TierListItemModel) => {
 				height='100'
 				width='100'
 				alt='Tier list item'
-				className={`${baseClasses} object-cover`}
+				className='object-cover'
 			/>
 		);
 	} else {
-		let textSize = 'text-xl';
-		if (item.name.length < 5) {
-			textSize = 'text-xl';
-		}
+		const l = item.name.length;
+		let textSize = l <= 3 ? 'text-xl' : l <= 5 ? 'text-base' : l <= 6 ? 'text-sm' : 'text-xs';
+		const base = 1;
+		// text-xl: 1.25rem
+		// text-base: 1rem
+		// text-sm: 0.75rem
+		let maxBaseSize = 1.25;
+		let itemSizeMultiplier = size / DEFAULT_ITEM_SIZE;
+		let textSizeRem = Math.min(maxBaseSize, 5 / (l / 3)) * itemSizeMultiplier;
+		// console.log(size);
+		// console.log(textSize);
+
 		imageDiv = (
-			<div className={`${baseClasses} bg-white ${textSize}`}>
-				<span>{item.name}</span>
-			</div>
+			<span
+				className='text-center w-full wrap-break-word'
+				style={{ fontSize: `${textSizeRem}rem`, lineHeight: `(1 / ${textSizeRem}` }}
+				// style={{ fontSize: `var(--${textSize})`, lineHeight: `var(--${textSize}--line-height)` }}
+			>
+				{item.name}
+			</span>
 		);
 	}
 	return (
@@ -49,19 +61,29 @@ const UndraggableItem = (item: TierListItemModel) => {
 					{item.name}
 				</span>
 			</div>
-			<div>{imageDiv}</div>
+
+			<div className={`${baseClasses} bg-white text-wrap`} style={itemStyle}>
+				{imageDiv}
+			</div>
 		</>
 	);
 };
 
-const RenderedItem: React.FC<RenderedItemProps> = ({ item, isDraggable = true }) => {
+interface RenderedItemProps {
+	item: TierListItemModel;
+	// Height and width of the item
+	size: number;
+	isDraggable: boolean;
+}
+
+const RenderedItem: React.FC<RenderedItemProps> = ({ item, isDraggable, size }) => {
 	const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
 		id: item.id,
 	});
 
 	// TierListItem means this is a different user's ranking, so not draggable.
 	if (item instanceof TierListItem || !isDraggable) {
-		return <div className='relative h-fit group'>{UndraggableItem(item)}</div>;
+		return <div className='relative h-fit group'>{UndraggableItem(item, size)}</div>;
 	}
 
 	const style = {
@@ -80,7 +102,7 @@ const RenderedItem: React.FC<RenderedItemProps> = ({ item, isDraggable = true })
 			{...listeners}
 			{...attributes}
 		>
-			{UndraggableItem(item)}
+			{UndraggableItem(item, size)}
 		</div>
 	);
 };

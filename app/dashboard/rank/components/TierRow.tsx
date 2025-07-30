@@ -25,23 +25,27 @@ interface TierRowProps {
 	index: number;
 	// Map of user name to items
 	items: Map<string, TierListItemModel[]>;
+	// The size of rendered items
+	itemSize: number;
 }
 
-const TierRow: React.FC<TierRowProps> = ({ tier, index, items }) => {
+const TierRow: React.FC<TierRowProps> = ({ tier, index, items, itemSize }) => {
 	const { isOver, setNodeRef } = useDroppable({
 		id: tier.id,
 	});
 
-	const style = { backgroundColor: isOver ? TIER_ROW_BG_COLOR_HOVER : '' };
+	const coloredSquareStyle = {
+		backgroundColor: tier.color,
+	};
 
 	return (
 		<div
 			ref={setNodeRef}
 			id={tier.id}
-			className='flex grow-1 sm:flex-row items-center h-30 border-t-4 border-black border-r-4'
+			className='flex grow-1 sm:flex-row items-center min-h-30 h-fit border-t-4 border-black border-r-4'
 		>
 			<div
-				style={{ backgroundColor: tier.color }}
+				style={coloredSquareStyle}
 				className='h-full aspect-square flex items-center justify-center'
 			>
 				{tier.name}
@@ -50,7 +54,7 @@ const TierRow: React.FC<TierRowProps> = ({ tier, index, items }) => {
 				{Array.from(items.entries()).map(([userName, items], i) => (
 					<React.Fragment key={i}>
 						<div
-							className='tier-items flex-1 flex flex-wrap gap-2 p-2 border-l-4'
+							className='flex-1 flex flex-wrap gap-2 p-1 border-l-4'
 							style={i == 0 && isOver ? { backgroundColor: TIER_ROW_BG_COLOR_HOVER } : undefined}
 						>
 							{index === 0 && i > 0 && (
@@ -59,7 +63,7 @@ const TierRow: React.FC<TierRowProps> = ({ tier, index, items }) => {
 								</div>
 							)}
 							{items.map((item) => (
-								<RenderedItem key={item.id} item={item} />
+								<RenderedItem key={item.id} item={item} size={itemSize} isDraggable={true} />
 							))}
 						</div>
 					</React.Fragment>

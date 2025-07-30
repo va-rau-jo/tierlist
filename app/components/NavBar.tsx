@@ -1,7 +1,7 @@
 import { ActionButton } from './Button';
-import { useFirebase } from '../firebase/FirebaseProvider';
+import { useFirebase } from './providers/FirebaseProvider';
 import Link from 'next/link';
-import { usePopup } from './popup/PopupContext';
+import { usePopup } from './providers/PopupProvider';
 
 export default function NavBar() {
 	const { user, signOut } = useFirebase();

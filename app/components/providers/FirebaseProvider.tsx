@@ -4,9 +4,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { onAuthStateChanged, getAuth, User, signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { firebaseConfig } from './firebase_config';
+import { firebaseConfig } from '../../firebase/firebase_config';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { addUser } from './firebase_utils';
+import { addUser } from '../../firebase/firebase_utils';
 
 interface FirebaseContextType {
 	auth: ReturnType<typeof getAuth> | null;
@@ -50,7 +50,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 			const userCredential = await signInWithPopup(auth, googleProvider);
 			const user = userCredential.user;
 
-			console.log(db);
 			if (db) {
 				await addUser(user.uid, user.displayName ?? 'Guest User', db);
 			}
