@@ -24,6 +24,7 @@ import { Page, PageBody } from '@/app/components/Page';
 import { DroppableArea } from '../components/DroppableArea';
 import RenderedItem from '@/app/dashboard/rank/components/RenderedItem';
 import { RankingPageHeader } from '../components/RankingPageHeader';
+import { useUserNames } from '@/app/components/providers/UserNamesProvider';
 
 const RANKING_CONTAINER_HEIGHT = `calc(var(--spacing) * ${TIER_ROW_HEIGHT * 6})`;
 
@@ -31,6 +32,7 @@ const RankPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
 	const router = useRouter();
 	const { showPopup } = usePopup();
+	const { getUserName, fetchUserName } = useUserNames();
 	// Whether we are still loading the tier list).
 	const [isLoadingTierList, setIsLoadingTierList] = useState(true);
 	const tierListId = useParams().id?.toString();
@@ -78,8 +80,7 @@ const RankPage: React.FC = () => {
 
 		const fetchTierList = async () => {
 			console.log('FETCHING');
-			// User and DB are confirmed not null
-			setIsLoadingTierList(true); // This update should *not* be a dependency
+			setIsLoadingTierList(true);
 
 			const tierList = await getTierList(tierListId, db);
 			if (tierList === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
@@ -90,16 +91,17 @@ const RankPage: React.FC = () => {
 
 			let userRankingSet = false;
 			if (tierList.userRankings) {
-				// All other user IDs who have ranked the tier list.
-				const userIds = Array.from(tierList.userRankings.keys());
-				const userRanking = tierList.userRankings.get(user.uid);
-				if (userRanking) {
-					// We will set the current user's rankings since it exists.
+				// Fetch all usernames of userIds in userRankings
+				console.log(Array.from(tierList.userRankings.keys()));
+				await Promise.all(tierList.userRankings.keys().map((userId) => fetchUserName(userId)));
+
+				if (tierList.userRankings.has(user.uid)) {
 					userRankingSet = true;
 				}
 			}
 			if (!userRankingSet) {
-				// Default to creating a new map.
+				// We will use the current UserRankings if they exist, otherwise create
+				// a new map.
 				const newMap = new Map<string, TierListItemModel[]>(
 					tierList.tiers.map((tier) => [tier.id, []])
 				);
@@ -119,6 +121,7 @@ const RankPage: React.FC = () => {
 		user,
 		isLoading,
 		router,
+		fetchUserName,
 	]);
 
 	if (shouldRedirectToLogin(user, db, isLoading)) {
@@ -219,7 +222,7 @@ const RankPage: React.FC = () => {
 							.filter(([userId]) => userId !== user.uid)
 							.map(([userId]) => (
 								<div key={userId}>
-									{/* <span className='text-sm font-medium'>{userIdToNameMap.get(userId)}</span> */}
+									<span className='text-sm font-medium'>{getUserName(userId)}</span>
 									<input
 										type='checkbox'
 										className='ml-2'
@@ -343,7 +346,7 @@ const RankPage: React.FC = () => {
 	allRankings.set(user.uid, userRankings);
 	const rankingContainer = (
 		<div
-			className={`flex flex-row bg-[${TIER_ROW_BG_COLOR}] border-b-4 border-l-4 border-r-4 border-black`}
+			className={`flex flex-row bg-[${TIER_ROW_BG_COLOR}] border-y-2 border-black`}
 			style={{ height: RANKING_CONTAINER_HEIGHT }}
 		>
 			<div className='flex flex-col flex-3'>

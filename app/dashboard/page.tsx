@@ -100,16 +100,23 @@ const DashboardPage: React.FC = () => {
 	return (
 		<Page className='flex flex-col items-center'>
 			<NavBar />
-			<div className='flex justify-center items-center flex-1 flex-col px-8 mt-16 max-w-5xl'>
+			<div
+				className='flex justify-center items-center flex-1 flex-col px-8 mt-16 max-w-5xl'
+				style={{ maxWidth: '95vw' }}
+			>
 				<section className='flex w-full h-25 space-x-2 justify-center items-center'>
 					<ActionHeader>
-						<span className='text-xl w-fit h-fit text-center'> Create your own tierlist! </span>
+						<span className='text-base sm:text-lg md:text-xl w-fit h-fit text-center'>
+							Create your own tierlist!
+						</span>
 						<Link href={'/dashboard/create'}>
-							<ActionButton variant='primary'>Create New Tierlist</ActionButton>
+							<ActionButton className='text-nowrap' variant='primary'>
+								Create New Tierlist
+							</ActionButton>
 						</Link>
 					</ActionHeader>
 					<ActionHeader>
-						<span className='text-xl w-fit h-fit text-center'>
+						<span className='text-base sm:text-lg md:text-xl w-fit h-fit text-center'>
 							Get a tierlist ID from a friend to join!
 						</span>
 						<div className='flex justify-center items-center space-x-2'>
@@ -121,7 +128,11 @@ const DashboardPage: React.FC = () => {
 								placeholder='Tierlist ID'
 								className='w-full p-2 border border-black rounded-md shadow-sm focus:border-indigo-500 sm:text-sm'
 							/>
-							<ActionButton onClick={joinTierListOnClick} variant='primary' className='h-fit'>
+							<ActionButton
+								onClick={joinTierListOnClick}
+								variant='primary'
+								className='text-nowrap h-fit'
+							>
 								{joinTierListText}
 							</ActionButton>
 						</div>
