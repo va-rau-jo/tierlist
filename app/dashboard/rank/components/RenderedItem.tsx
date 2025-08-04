@@ -55,17 +55,17 @@ const UndraggableItem = (item: TierListItemModel, size: number) => {
 		);
 	}
 	return (
-		<>
-			<div className='absolute flex justify-center -top-9 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-nowrap'>
+		<div className='relative w-max'>
+			<div className={`${baseClasses} peer bg-white text-wrap`} style={itemStyle}>
+				{imageDiv}
+			</div>
+
+			<div className='absolute flex justify-center -top-9 left-0 right-0 invisible peer-hover:visible transition-opacity duration-200 text-nowrap'>
 				<span className='bg-gray-800/80 px-2 py-1 rounded text-white font-bold cursor-default'>
 					{item.name}
 				</span>
 			</div>
-
-			<div className={`${baseClasses} bg-white text-wrap`} style={itemStyle}>
-				{imageDiv}
-			</div>
-		</>
+		</div>
 	);
 };
 
@@ -83,7 +83,7 @@ const RenderedItem: React.FC<RenderedItemProps> = ({ item, isDraggable, size }) 
 
 	// TierListItem means this is a different user's ranking, so not draggable.
 	if (item instanceof TierListItem || !isDraggable) {
-		return <div className='relative h-fit group'>{UndraggableItem(item, size)}</div>;
+		return <div className='relative h-fit'>{UndraggableItem(item, size)}</div>;
 	}
 
 	const style = {
@@ -95,13 +95,7 @@ const RenderedItem: React.FC<RenderedItemProps> = ({ item, isDraggable, size }) 
 	};
 
 	return (
-		<div
-			className='relative h-fit group'
-			ref={setNodeRef}
-			style={style}
-			{...listeners}
-			{...attributes}
-		>
+		<div className='relative h-fit' ref={setNodeRef} style={style} {...listeners} {...attributes}>
 			{UndraggableItem(item, size)}
 		</div>
 	);

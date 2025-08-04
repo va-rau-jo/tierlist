@@ -411,9 +411,15 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 						Items you add will show up here!
 					</span>
 				) : (
-					<div className='pt-2 pl-2 pr-2 flex flex-wrap space-x-2'>
+					<div className='pt-2 pl-2 pr-2 flex flex-wrap'>
 						{items.map((item: TierListItemModel, index) => (
-							<RenderedItem key={index} item={item} size={DEFAULT_ITEM_SIZE} isDraggable={false} />
+							<div key={index} className='relative group mb-2 mr-2'>
+								<RenderedItem item={item} size={DEFAULT_ITEM_SIZE} isDraggable={false} />
+								<i
+									className='fas fa-trash absolute text-sm bottom-0 right-0 cursor-pointer opacity-100 group-hover:opacity-100 transition-opacity hover:bg-gray-300 hover:rounded-full p-1'
+									onClick={() => setItems(items.filter((_, i) => i !== index))}
+								></i>
+							</div>
 						))}
 					</div>
 				)}
