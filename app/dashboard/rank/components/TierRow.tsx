@@ -63,7 +63,7 @@ const TierRow: React.FC<TierRowProps> = ({ tier, index, items, itemSize }) => {
 							</div>
 						)}
 						{items.map((item) => (
-							<RenderedItem key={item.id} item={item} size={itemSize} isDraggable={true} />
+							<RenderedItem key={item.id} item={item} itemSize={itemSize} isDraggable={true} />
 						))}
 					</div>
 				))}

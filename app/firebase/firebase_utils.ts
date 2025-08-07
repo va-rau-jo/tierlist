@@ -45,11 +45,15 @@ export const shouldRedirectToLogin = (
 
 export const addTierList = async (
 	newTierList: TierList,
+	user: User,
 	db: ReturnType<typeof getFirestore>
 ): Promise<TierList | FirebaseReturnStatus> => {
 	/**
 	 * Saves a TierList object to Firebase.
+	 *
+	 * The creator joins the tierlist by default.
 	 * @param newTierList - TierList object to be saved.
+	 * @param user - The user creating the tierlist.
 	 * @param db - The Firebase database object.
 	 *
 	 * @returns the updated tier list object or a firebase error.
@@ -59,11 +63,14 @@ export const addTierList = async (
 	const tierListObj = newTierList.toFirebaseObject();
 	try {
 		await setDoc(newTierListDocRef, tierListObj);
-		return newTierList;
 	} catch (error) {
 		console.error('Error creating tierlist:', error);
 		return FirebaseReturnStatus.TIERLIST_NOT_CREATED_ERROR;
 	}
+
+	await joinTierList(newTierList.id, user.uid, db);
+
+	return newTierList;
 };
 
 export const updateTierList = async (
@@ -335,6 +342,8 @@ export const getUserTierLists = async (
 	const userTierListsRef = collection(db, `users/${userId}/tierlists`);
 	const userTierListsSnapshot = await getDocs(userTierListsRef);
 	const userTierListIds = userTierListsSnapshot.docs.map((doc) => doc.data().tierListId);
+
+	console.log(userTierListIds);
 
 	if (userTierListIds.length === 0) {
 		return [];

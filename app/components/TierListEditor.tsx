@@ -13,7 +13,7 @@ import { TierList, TierListRankings } from '../model/TierList';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Tier } from '../model/Tier';
 import { generateUniqueId } from '../utils';
-import { DEFAULT_ITEM_SIZE, TIER_ITEM_HEIGHT } from '../constants';
+import { MAX_ITEM_SIZE, TIER_ITEM_HEIGHT } from '../constants';
 import { usePopup } from './providers/PopupProvider';
 import { useRouter } from 'next/navigation';
 import RenderedItem from '../dashboard/rank/components/RenderedItem';
@@ -55,6 +55,8 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 
 	// The current item we are trying to add
 	const [currentAddItem, setCurrentAddItem] = useState(createNewTierListItem());
+	const [currentEditItem, setCurrentEditItem] = useState<TierListItemModel | undefined>();
+
 	// Items and tiers (tiers are started as defaults, items starts empty).
 	const [items, setItems] = useState<TierListItemModel[]>([]);
 	const [tiers, setTiers] = useState([
@@ -122,7 +124,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	}
 
 	// Add a new item input field
-	const handleAddItem = () => {
+	const addItem = () => {
 		if (!currentAddItem.name) {
 			showPopup('Item name is required.', 'error');
 		} else if (currentAddItem.imageUrl && !currentAddItem.imageUrl.startsWith('http')) {
@@ -133,9 +135,32 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		}
 	};
 
-	// Update item value (text or image URL)
-	const handleCurrentItemChange = (field: string, value: string) => {
+	const updateEditItem = () => {
+		if (!currentEditItem) {
+			showPopup('No item to edit.', 'error');
+			return;
+		} else if (!currentEditItem.name) {
+			showPopup('Item name is required.', 'error');
+		} else if (currentEditItem.imageUrl && !currentEditItem.imageUrl.startsWith('http')) {
+			showPopup('Invalid URL provided.', 'error');
+		} else {
+			setItems(items.map((item) => (item.id === currentEditItem.id ? currentEditItem : item)));
+			setCurrentEditItem(undefined);
+		}
+	};
+
+	// Update current add item value (text or image URL)
+	const handleCurrentAddItemChange = (field: string, value: string) => {
 		setCurrentAddItem((prev) => ({ ...prev, [field]: value }));
+	};
+
+	// Update current edit item's values. Item is guaranteed to be defined.
+	const handleCurrentEditItemChange = (field: string, value: string) => {
+		setCurrentEditItem((prev) => {
+			if (prev) {
+				return { ...prev, [field]: value };
+			}
+		});
 	};
 
 	// Add a new tier
@@ -203,7 +228,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			});
 		} else {
 			// Create a new tier list, update Firebase set fields like tierlist id.
-			addTierList(newTierList, db).then((returnedTierList) => {
+			addTierList(newTierList, user, db).then((returnedTierList) => {
 				if (returnedTierList === FirebaseReturnStatus.TIERLIST_NOT_CREATED_ERROR) {
 					showPopup('Tier list could not be created.', 'error');
 				} else if (returnedTierList instanceof TierList) {
@@ -261,7 +286,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 								const newEditorIds = editorIds.filter((_, i) => i !== index);
 								setEditorIds(newEditorIds);
 							}}
-						></i>
+						/>
 						<Input
 							label=''
 							id={`user-${index}`}
@@ -316,32 +341,46 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		</div>
 	);
 
+	const itemAddingOrEditing = currentEditItem ? currentEditItem : currentAddItem;
 	const addItemDiv = (
 		<div className='flex flex-col bg-gray-50 rounded-lg border border-gray-200 mb-2'>
-			<h2 className='text-center text-xl'> Add An Item</h2>
+			<h2 className='text-center text-xl'> {currentEditItem ? 'Edit Item' : 'Add An Item'}</h2>
 			<div className='flex flex-col sm:flex-row gap-3 items-center justify-center'>
 				<Input
 					label=''
-					id={`item-text-${currentAddItem.id}`}
-					value={currentAddItem.name}
-					onChange={(e: { target: { value: string } }) =>
-						handleCurrentItemChange('name', e.target.value)
-					}
+					id={`item-text-${itemAddingOrEditing.id}`}
+					value={itemAddingOrEditing.name}
+					onChange={(e: { target: { value: string } }) => {
+						const handler = currentEditItem
+							? handleCurrentEditItemChange
+							: handleCurrentAddItemChange;
+						handler('name', e.target.value);
+					}}
 					placeholder='Item Name (Required)'
 					additionalClassNames='flex-grow'
 				/>
 				<Input
 					label=''
-					id={`item-image-${currentAddItem.id}`}
-					value={currentAddItem.imageUrl}
-					onChange={(e: { target: { value: string } }) =>
-						handleCurrentItemChange('imageUrl', e.target.value)
-					}
+					id={`item-image-${itemAddingOrEditing.id}`}
+					value={itemAddingOrEditing.imageUrl}
+					onChange={(e: { target: { value: string } }) => {
+						const handler = currentEditItem
+							? handleCurrentEditItemChange
+							: handleCurrentAddItemChange;
+						handler('imageUrl', e.target.value);
+					}}
 					placeholder='Image URL (Optional)'
 					additionalClassNames='flex-grow'
 				/>
-				<ActionButton variant='outline' onClick={handleAddItem} className='px-6'>
-					Add Item
+				<ActionButton
+					variant='outline'
+					onClick={() => {
+						const handler = currentEditItem ? updateEditItem : addItem;
+						handler();
+					}}
+					className='px-6'
+				>
+					{currentEditItem ? 'Update Item' : 'Add Item'}
 				</ActionButton>
 			</div>
 		</div>
@@ -405,7 +444,6 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				{addEditorsDiv} {addRankersDiv}
 			</div>
 			{addItemDiv}
-
 			{/* Item Bank */}
 			<div className='w-full h-full min-h-30 bg-gray-800 flex items-center justify-center'>
 				{items.length === 0 ? (
@@ -416,7 +454,11 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 					<div className='pt-2 pl-2 pr-2 flex flex-wrap'>
 						{items.map((item: TierListItemModel, index) => (
 							<div key={index} className='relative group mb-2 mr-2'>
-								<RenderedItem item={item} size={DEFAULT_ITEM_SIZE} isDraggable={false} />
+								<RenderedItem item={item} itemSize={MAX_ITEM_SIZE} isDraggable={false} />
+								<i
+									className='fas fa-pencil absolute text-sm bottom-0 left-0 cursor-pointer opacity-100 group-hover:opacity-100 transition-opacity hover:bg-gray-300 hover:rounded-full p-1'
+									onClick={() => setCurrentEditItem(item)}
+								></i>
 								<i
 									className='fas fa-trash absolute text-sm bottom-0 right-0 cursor-pointer opacity-100 group-hover:opacity-100 transition-opacity hover:bg-gray-300 hover:rounded-full p-1'
 									onClick={() => setItems(items.filter((_, i) => i !== index))}

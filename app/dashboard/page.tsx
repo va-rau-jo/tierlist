@@ -27,7 +27,8 @@ const ActionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 	);
 };
 
-const joinDefaultText = 'Join Tierlist';
+const JOIN_BUTTON_DEFAULT_TEXT = 'Join Tierlist';
+const JOIN_BUTTON_JOINING_TEXT = 'Joining...';
 
 const DashboardPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
@@ -36,7 +37,7 @@ const DashboardPage: React.FC = () => {
 	const [userTierLists, setUserTierLists] = React.useState<TierList[]>([]);
 	const [joinTierListId, setJoinTierListId] = React.useState('');
 	const [isLoadingTierLists, setIsLoadingTierLists] = React.useState(true);
-	const [joinTierListText, setJoinTierListText] = React.useState(joinDefaultText);
+	const [joinTierListText, setJoinTierListText] = React.useState(JOIN_BUTTON_DEFAULT_TEXT);
 
 	useEffect(() => {
 		// User and DB are confirmed not null
@@ -74,7 +75,7 @@ const DashboardPage: React.FC = () => {
 
 	const joinTierListOnClick = () => {
 		if (joinTierListId) {
-			setJoinTierListText('Joining...');
+			setJoinTierListText(JOIN_BUTTON_JOINING_TEXT);
 			joinTierList(joinTierListId, user.uid, db).then((status) => {
 				if (status === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
 					showPopup(`Tierlist ${joinTierListId} was not found.`, 'error');
@@ -84,7 +85,7 @@ const DashboardPage: React.FC = () => {
 				} else {
 					refreshTierLists();
 				}
-				setJoinTierListText(joinDefaultText);
+				setJoinTierListText(JOIN_BUTTON_DEFAULT_TEXT);
 			});
 		} else {
 			showPopup('Tierlist ID cannot be empty.', 'error');

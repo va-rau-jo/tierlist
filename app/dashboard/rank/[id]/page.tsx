@@ -326,7 +326,7 @@ const RankPage: React.FC = () => {
 		>
 			<div className='p-2 flex flex-wrap space-x-2 space-y-2'>
 				{userRankings.get(UNASSIGNED_TIER)?.map((item) => (
-					<RenderedItem key={item.id} item={item} size={itemSize} isDraggable={true} />
+					<RenderedItem key={item.id} item={item} itemSize={itemSize} isDraggable={true} />
 				))}
 			</div>
 		</DroppableArea>
@@ -372,7 +372,7 @@ const RankPage: React.FC = () => {
 				</PageBody>
 				<DragOverlay>
 					{activeItem ? (
-						<RenderedItem item={activeItem} size={itemSize} isDraggable={true} />
+						<RenderedItem item={activeItem} itemSize={itemSize} isDraggable={true} />
 					) : null}
 				</DragOverlay>
 			</DndContext>

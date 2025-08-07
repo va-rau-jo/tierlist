@@ -238,7 +238,7 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
 	};
 
 	return (
-		<div className='flex relative flex-col flex-1 justify-center items-center border-t-4 border-black'>
+		<div className='flex relative flex-col flex-1 justify-center items-center border-y-2 border-r-4 border-black'>
 			<div className='absolute flex -top-9'>
 				<ColumnHeader text='Average' />
 			</div>
