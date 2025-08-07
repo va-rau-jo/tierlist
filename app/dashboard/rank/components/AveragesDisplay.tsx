@@ -13,9 +13,10 @@ import ColumnHeader from '@/app/components/ColumnHeader';
 import { TierList, TierListUserRankings } from '@/app/model/TierList';
 import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
 import { TIER_ROW_HEIGHT } from '@/app/constants';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import Image from 'next/image';
 import CloseIcon from '../../../components/CloseIcon';
+import { ImageLoadStatus, useImageLoader } from '@/app/components/providers/ImageLoaderProvider';
 
 class ItemStatus {
 	item: TierListItem;
@@ -38,9 +39,17 @@ interface AveragesDisplayProps {
 	tierList: TierList;
 	// Maps user ID to their tier list rankings
 	allRankings: TierListUserRankings;
+	// The size of the average markers
+	itemSize: number;
 }
 
-export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allRankings }) => {
+export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
+	tierList,
+	allRankings,
+	itemSize,
+}) => {
+	const { getImageStatus } = useImageLoader();
+
 	// Tuple with [tierIndex, indexWithinTier] that identifies the item to display.
 	const [displayedItemIndex, setDisplayedItemIndex] = useState<number[]>([]);
 
@@ -49,6 +58,38 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 		setDisplayedItemIndex(sameIndex ? [] : index);
 	};
 
+	const getImageDiv = (status: ItemStatus): ReactNode => {
+		if (!status.item.imageUrl) {
+			return null;
+		}
+
+		const imageStatus = getImageStatus(status.item.imageUrl);
+		if (imageStatus === ImageLoadStatus.LOADED) {
+			return (
+				<Image
+					src={status.item.imageUrl}
+					height='100'
+					width='100'
+					alt='Tier list item'
+					className='object-cover'
+				/>
+			);
+		} else if (imageStatus === ImageLoadStatus.LOADING) {
+			return (
+				<Image
+					src='/loading_black.gif'
+					height='100'
+					width='100'
+					alt='Loading...'
+					className='object-cover'
+				/>
+			);
+		}
+		return null;
+	};
+
+	// The size of an average marker circle.
+	const markerSize = itemSize / 0.75;
 	// Maps item ID to the item "value"
 	const averages = new Map<string, ItemStatus>();
 	const tiers = tierList.tiers;
@@ -81,40 +122,8 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 			}
 		}
 	}
-	let items = Array.from(averages.values());
-
-	// items = [
-	// 	new ItemStatus(new TierListItemModel('0', 'text', ''), 1, 0),
-	// 	new ItemStatus(new TierListItemModel('0', 'asdfasdfasdfadsfasdfasdfasdfasdfasdfasd', ''), 1, 0),
-	// 	new ItemStatus(new TierListItemModel('0', ' ', ''), 1, 0),
-	// 	new ItemStatus(new TierListItemModel('0.33', 'text', ''), 1, 0.33),
-	// 	new ItemStatus(new TierListItemModel('0.33', 'text', ''), 1, 0.33),
-	// 	new ItemStatus(new TierListItemModel('1', 'text', ''), 1, 1),
-	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5 (3)', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5 (3)', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('1', 'text', ''), 1, 1),
-	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5 (3)', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5 (3)', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5 (3)', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('1.5', 'text', ''), 2, 3),
-	// 	new ItemStatus(new TierListItemModel('2', 'text', ''), 1, 2),
-	// 	new ItemStatus(new TierListItemModel('3', 'text', ''), 1, 3),
-	// 	new ItemStatus(new TierListItemModel('4', 'text', ''), 1, 4),
-	// 	new ItemStatus(new TierListItemModel('4.5', 'text', ''), 1, 4.5),
-	// 	new ItemStatus(new TierListItemModel('5 (2)', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5 (4)', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5 (5)', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5 (2)', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5 (4)', 'text', ''), 1, 5),
-	// 	new ItemStatus(new TierListItemModel('5 (5)', 'text', ''), 1, 5),
-	// ];
-
+	const items = Array.from(averages.values());
+	// Add item average field based on sum and count, and sort based on average.
 	items.forEach((item) => (item.average = Math.round((item.sum / item.count) * 100) / 100));
 	items.sort((a, b) => a.average - b.average);
 
@@ -140,21 +149,15 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 		const tierText = lowTier === highTier ? `${lowTier} Tier` : `${highTier}-${lowTier} Tier`;
 		// Set tier color to the higher tier.
 		const tierColor = colors[Math.floor(status.average)];
+
 		return (
 			<div
-				className='absolute bottom-4 left-1/2 flex flex-col w-max transform -translate-x-1/2 bg-white border border-gray-300 rounded text-sm shadow-lg cursor-default'
+				className='absolute left-1/2 flex flex-col w-max transform -translate-x-1/2 bg-white border border-gray-300 rounded text-sm shadow-lg cursor-default'
+				style={{ bottom: `calc(${markerSize}px + 10px)` }}
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className='flex space-x-2'>
-					{status.item.imageUrl ? (
-						<Image
-							src={status.item.imageUrl}
-							height='100'
-							width='100'
-							alt='Tier list item'
-							className='object-cover'
-						/>
-					) : null}
+					{getImageDiv(status)}
 					<div className='flex flex-col min-w-fit justify-center'>
 						<div className='flex justify-end'>
 							<button
@@ -184,26 +187,52 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({ tierList, allR
 		// Round to the nearest 2 decimals.
 		const percentage = Math.round((10000 * tierIndex) / tiers.length) / 100;
 		// Center the points in the middle of the row
-		const offset = TIER_ROW_HEIGHT / 2 - 1;
+		const offset = TIER_ROW_HEIGHT * 0.5 - 1;
 		const topPx = `calc(${percentage}% + var(--spacing) * ${offset})`;
+
 		return (
 			<div
 				key={tierIndex}
-				className='absolute flex flex-wrap justify-center space-x-1 space-y-1 ml-2'
+				className='absolute flex flex-wrap justify-center space-x-1 space-y-1 ml-4 mr-2'
 				style={{ top: topPx }}
 			>
-				{itemMapping[1].map((status, i) => (
-					// Circle Icon
-					<div
-						key={i}
-						className='relative w-2 h-2 rounded-full border-2 border-black bg-black cursor-pointer z-100'
-						onClick={() => toggleDisplayedItemIndex([tierIndex, i])}
-					>
-						{tierIndex === displayedItemIndex[0] && i === displayedItemIndex[1]
-							? createItemPopup(status)
-							: null}
-					</div>
-				))}
+				{itemMapping[1].map((status, i) => {
+					// Circle marker in average gradient
+					const imageDiv = getImageDiv(status);
+					if (imageDiv) {
+						return (
+							<div className='relative' key={i}>
+								<Image
+									src={status.item.imageUrl}
+									alt='Tier list item'
+									width='100'
+									height='100'
+									className='relative rounded-full border-2 border-black cursor-pointer z-100'
+									style={{
+										width: markerSize + 'px',
+										height: markerSize + 'px',
+									}}
+									onClick={() => toggleDisplayedItemIndex([tierIndex, i])}
+								/>
+								{tierIndex === displayedItemIndex[0] && i === displayedItemIndex[1]
+									? createItemPopup(status)
+									: null}
+							</div>
+						);
+					}
+					return (
+						<div
+							key={i}
+							className='relative rounded-full border-2 border-black bg-black cursor-pointer z-100'
+							style={{ width: markerSize + 'px', height: markerSize + 'px' }}
+							onClick={() => toggleDisplayedItemIndex([tierIndex, i])}
+						>
+							{tierIndex === displayedItemIndex[0] && i === displayedItemIndex[1]
+								? createItemPopup(status)
+								: null}
+						</div>
+					);
+				})}
 			</div>
 		);
 	};

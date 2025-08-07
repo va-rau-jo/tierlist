@@ -79,7 +79,6 @@ const RankPage: React.FC = () => {
 		}
 
 		const fetchTierList = async () => {
-			console.log('FETCHING');
 			setIsLoadingTierList(true);
 
 			const tierList = await getTierList(tierListId, db);
@@ -250,23 +249,14 @@ const RankPage: React.FC = () => {
 			for (const [tierId, items] of rankingMap) {
 				if (tierId === tier.id) {
 					const userName = 'NAME';
-					// const userName = userIdToNameMap.get(userId)!;
-					const newItems = [];
-					let test = '';
-					for (let i = 0; i < 20; i++) {
-						test += 'A';
-
-						newItems.push(new TierListItem(`${userId}-${i}`, test, '', userName, false));
-					}
-					// const newItems = items.map(
-					// 	(item) =>
-					// 		new TierListItem(`${userId}-${item.id}`, item.name, item.imageUrl, userName, false)
-					// );
+					const newItems = items.map(
+						(item) =>
+							new TierListItem(`${userId}-${item.id}`, item.name, item.imageUrl, 'name', false)
+					);
 					allItems.set(userName, newItems);
 				}
 			}
 		}
-		console.log(allItems);
 		return <TierRow key={tier.id} tier={tier} index={index} items={allItems} itemSize={itemSize} />;
 	};
 
@@ -319,7 +309,6 @@ const RankPage: React.FC = () => {
 								defaultValue={15}
 								className='ml-2'
 								onChange={(e) => {
-									console.log(e.target.value);
 									setItemSize(Number(e.target.value));
 								}}
 							/>
@@ -353,7 +342,7 @@ const RankPage: React.FC = () => {
 			</div>
 			{isDisplayingAverage && (
 				<>
-					<AveragesDisplay tierList={tierList} allRankings={allRankings} />
+					<AveragesDisplay tierList={tierList} allRankings={allRankings} itemSize={itemSize} />
 				</>
 			)}
 		</div>
@@ -368,7 +357,7 @@ const RankPage: React.FC = () => {
 			>
 				<NavBar />
 				<PageBody>
-					<RankingPageHeader tierList={tierList} userId={user.uid} />
+					<RankingPageHeader tierList={tierList} />
 					<div className='flex w-full space-x-8'>
 						{toggleUserRankingsDiv}
 						{displaySettingsDiv}

@@ -1,10 +1,17 @@
 import { ActionButton } from '@/app/components/Button';
+import { useFirebase } from '@/app/components/providers/FirebaseProvider';
 import { usePopup } from '@/app/components/providers/PopupProvider';
 import { TierList } from '@/app/model/TierList';
 import Link from 'next/link';
 
-export const RankingPageHeader = ({ tierList, userId }: { tierList: TierList; userId: string }) => {
+export const RankingPageHeader = ({ tierList }: { tierList: TierList }) => {
 	const { showPopup } = usePopup();
+	const { user } = useFirebase();
+
+	if (!user) {
+		return;
+	}
+
 	return (
 		<>
 			<h2 className='text-3xl font-bold mb-2 text-center'>{tierList.name}</h2>
@@ -24,11 +31,11 @@ export const RankingPageHeader = ({ tierList, userId }: { tierList: TierList; us
 					</span>
 				</span>
 
-				{tierList.editorIds.has(userId) && (
+				{tierList.creatorId === user.uid || tierList.editorIds.has(user.uid) ? (
 					<Link href={`/dashboard/edit/${tierList.id}`}>
 						<ActionButton variant='outline'>Edit</ActionButton>
 					</Link>
-				)}
+				) : null}
 			</div>
 		</>
 	);

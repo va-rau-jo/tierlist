@@ -78,6 +78,23 @@ export const updateTierList = async (
 	 * @param db - The Firebase database object.
 	 */
 	const tierListRef = doc(db, TIERLIST_COLLECTION_NAME, existingTierListId);
+	const tierListDoc = await getDoc(tierListRef);
+	if (!tierListDoc.exists()) {
+		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
+	}
+
+	// Remove any rankings with deleted items
+	const currentRankings = tierListDoc.data().userRankings || {};
+	const validItemIds = new Set(newTierList.items.map((item) => item.id));
+	// Filter out deleted items from each user's rankings
+	Object.keys(currentRankings).forEach((userId) => {
+		const userRankings = currentRankings[userId];
+		Object.keys(userRankings).forEach((tierId) => {
+			userRankings[tierId] = userRankings[tierId].filter((itemId: string) =>
+				validItemIds.has(itemId)
+			);
+		});
+	});
 
 	const updateFields = {
 		lastUpdatedAt: serverTimestamp(),
@@ -96,6 +113,7 @@ export const updateTierList = async (
 			name: item.name,
 			imageUrl: item.imageUrl,
 		})),
+		userRankings: currentRankings,
 	};
 
 	await updateDoc(tierListRef, { ...updateFields });
@@ -314,9 +332,6 @@ export const getUserTierLists = async (
 	 * @returns A Promise of an array of TierLists.
 	 */
 	// Fetch list of ids that the user has stored as joined tier lists.
-	console.log('AUTH2');
-	console.log(userId);
-
 	const userTierListsRef = collection(db, `users/${userId}/tierlists`);
 	const userTierListsSnapshot = await getDocs(userTierListsRef);
 	const userTierListIds = userTierListsSnapshot.docs.map((doc) => doc.data().tierListId);

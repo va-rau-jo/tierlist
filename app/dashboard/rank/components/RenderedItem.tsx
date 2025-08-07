@@ -29,27 +29,23 @@ const UndraggableItem = (item: TierListItemModel, size: number) => {
 
 	if (item.imageUrl && imageStatus === ImageLoadStatus.LOADING) {
 		imageDiv = (
-			<div className={`${baseClasses} bg-gray-400 peer text-wrap`} style={itemStyle}>
-				<Image
-					src='/loading.gif'
-					height='50'
-					width='50'
-					alt='Loading...'
-					className='object-cover'
-				/>
-			</div>
+			<Image
+				src='/loading_black.gif'
+				height='50'
+				width='50'
+				alt='Loading...'
+				className='object-cover'
+			/>
 		);
 	} else if (item.imageUrl && imageStatus === ImageLoadStatus.LOADED) {
 		imageDiv = (
-			<div className={`${baseClasses} bg-white peer text-wrap`} style={itemStyle}>
-				<Image
-					src={item.imageUrl}
-					height='100'
-					width='100'
-					alt='Tier list item'
-					className='object-cover'
-				/>
-			</div>
+			<Image
+				src={item.imageUrl}
+				height='100'
+				width='100'
+				alt='Tier list item'
+				className='object-cover'
+			/>
 		);
 	} else {
 		const l = item.name.length;
@@ -65,7 +61,7 @@ const UndraggableItem = (item: TierListItemModel, size: number) => {
 		// console.log(textSize);
 
 		imageDiv = (
-			<div className={`${baseClasses} bg-white peer text-wrap`} style={itemStyle}>
+			<>
 				{item.imageUrl && imageStatus === ImageLoadStatus.FAILED ? (
 					<div className='absolute top-0 right-0 text-red-500 rounded-sm'>
 						<ErrorIcon />
@@ -78,12 +74,14 @@ const UndraggableItem = (item: TierListItemModel, size: number) => {
 				>
 					{item.name}
 				</span>
-			</div>
+			</>
 		);
 	}
 	return (
 		<div className='relative w-max'>
-			{imageDiv}
+			<div className={`${baseClasses} bg-white peer text-wrap`} style={itemStyle}>
+				{imageDiv}
+			</div>
 
 			<div className='absolute flex justify-center -top-9 left-0 right-0 invisible peer-hover:visible transition-opacity duration-200 text-nowrap'>
 				<span className='bg-gray-800/80 px-2 py-1 rounded text-white font-bold cursor-default'>
