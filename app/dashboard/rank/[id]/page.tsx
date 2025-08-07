@@ -92,7 +92,6 @@ const RankPage: React.FC = () => {
 			let userRankingSet = false;
 			if (tierList.userRankings) {
 				// Fetch all usernames of userIds in userRankings
-				console.log(Array.from(tierList.userRankings.keys()));
 				await Promise.all(tierList.userRankings.keys().map((userId) => fetchUserName(userId)));
 
 				if (tierList.userRankings.has(user.uid)) {
@@ -139,10 +138,11 @@ const RankPage: React.FC = () => {
 	}
 
 	const userRankings = tierListRankings.get(user.uid);
-	console.log(tierListRankings);
 	if (!userRankings) {
 		return;
 	}
+	const allRankings = new Map(displayedTierListRankings);
+	allRankings.set(user.uid, userRankings);
 
 	const handleDragEnd = (event: DragEndEvent) => {
 		// Find the currently dragged item, and move it to the new correct tier
@@ -197,6 +197,32 @@ const RankPage: React.FC = () => {
 		setActiveItemId(event.active.id as string);
 	};
 
+	// Handle when the displayed rankings of a user is changed.
+	const handleDisplayedRankingChanged = (userId: string) => {
+		if (displayedTierListRankings.has(userId)) {
+			setDisplayedTierListRankings((prev) => {
+				const newMap = new Map(prev);
+				newMap.delete(userId);
+				return newMap;
+			});
+		} else {
+			setDisplayedTierListRankings((prev) => {
+				const newMap = new Map(prev);
+				const rankings = tierListRankings.get(userId)!;
+				// Copy rankings, set the tier list items to non modifiable
+				const newRankings = new Map(rankings);
+				for (const [tierId, items] of newRankings.entries()) {
+					newRankings.set(
+						tierId,
+						items.map((item) => Object.freeze({ ...item, isModifiable: false }))
+					);
+				}
+				newMap.set(userId, newRankings);
+				return newMap;
+			});
+		}
+	};
+
 	const saveRankings = async () => {
 		if (!tierListId || !db) {
 			return;
@@ -210,6 +236,38 @@ const RankPage: React.FC = () => {
 				showPopup('Rankings saved successfully!', 'success');
 			}
 		});
+	};
+
+	// Map a tier to a rendered TierRow object.
+	const mapTierRows = (tier: Tier, index: number) => {
+		// Maps username to list of items
+		const allItems = new Map<string, TierListItemModel[]>();
+		// Add current user items
+		const userItems = userRankings.get(tier.id)!;
+		allItems.set(user.uid, userItems);
+
+		for (const [userId, rankingMap] of displayedTierListRankings.entries()) {
+			for (const [tierId, items] of rankingMap) {
+				if (tierId === tier.id) {
+					const userName = 'NAME';
+					// const userName = userIdToNameMap.get(userId)!;
+					const newItems = [];
+					let test = '';
+					for (let i = 0; i < 20; i++) {
+						test += 'A';
+
+						newItems.push(new TierListItem(`${userId}-${i}`, test, '', userName, false));
+					}
+					// const newItems = items.map(
+					// 	(item) =>
+					// 		new TierListItem(`${userId}-${item.id}`, item.name, item.imageUrl, userName, false)
+					// );
+					allItems.set(userName, newItems);
+				}
+			}
+		}
+		console.log(allItems);
+		return <TierRow key={tier.id} tier={tier} index={index} items={allItems} itemSize={itemSize} />;
 	};
 
 	const toggleUserRankingsDiv = (
@@ -227,7 +285,7 @@ const RankPage: React.FC = () => {
 										type='checkbox'
 										className='ml-2'
 										checked={displayedTierListRankings.has(userId)}
-										onChange={() => handleRankingCheckedChange(userId)}
+										onChange={() => handleDisplayedRankingChanged(userId)}
 									/>
 								</div>
 							))}
@@ -272,69 +330,12 @@ const RankPage: React.FC = () => {
 		</>
 	);
 
-	const handleRankingCheckedChange = (userId: string) => {
-		if (displayedTierListRankings.has(userId)) {
-			setDisplayedTierListRankings((prev) => {
-				const newMap = new Map(prev);
-				newMap.delete(userId);
-				return newMap;
-			});
-		} else {
-			setDisplayedTierListRankings((prev) => {
-				const newMap = new Map(prev);
-				const rankings = tierListRankings.get(userId)!;
-				// Copy rankings, set the tier list items to non modifiable
-				const newRankings = new Map(rankings);
-				for (const [tierId, items] of newRankings.entries()) {
-					newRankings.set(
-						tierId,
-						items.map((item) => Object.freeze({ ...item, isModifiable: false }))
-					);
-				}
-				newMap.set(userId, newRankings);
-				return newMap;
-			});
-		}
-	};
-
-	// Map a tier to a rendered TierRow object.
-	const mapTierRows = (tier: Tier, index: number) => {
-		// Maps username to list of items
-		const allItems = new Map<string, TierListItemModel[]>();
-		// Add current user items
-		const userItems = userRankings.get(tier.id)!;
-		allItems.set(user.uid, userItems);
-
-		for (const [userId, rankingMap] of displayedTierListRankings.entries()) {
-			for (const [tierId, items] of rankingMap) {
-				if (tierId === tier.id) {
-					const userName = 'NAME';
-					// const userName = userIdToNameMap.get(userId)!;
-					const newItems = [];
-					let test = '';
-					for (let i = 0; i < 20; i++) {
-						test += 'A';
-
-						newItems.push(new TierListItem(`${userId}-${i}`, test, '', userName, false));
-					}
-					// const newItems = items.map(
-					// 	(item) =>
-					// 		new TierListItem(`${userId}-${item.id}`, item.name, item.imageUrl, userName, false)
-					// );
-					allItems.set(userName, newItems);
-				}
-			}
-		}
-		console.log(allItems);
-		return <TierRow key={tier.id} tier={tier} index={index} items={allItems} itemSize={itemSize} />;
-	};
-
-	const unassignedArea = (
+	const unassignedItemsArea = (
 		<DroppableArea
 			id={UNASSIGNED_TIER}
 			className={`w-full h-full min-h-30 bg-gray-800 flex items-center justify-center`}
 		>
-			<div className='pt-2 pl-2 pr-2 flex flex-wrap space-x-2'>
+			<div className='p-2 flex flex-wrap space-x-2 space-y-2'>
 				{userRankings.get(UNASSIGNED_TIER)?.map((item) => (
 					<RenderedItem key={item.id} item={item} size={itemSize} isDraggable={true} />
 				))}
@@ -342,12 +343,10 @@ const RankPage: React.FC = () => {
 		</DroppableArea>
 	);
 
-	const allRankings = new Map(displayedTierListRankings);
-	allRankings.set(user.uid, userRankings);
 	const rankingContainer = (
 		<div
 			className={`flex flex-row bg-[${TIER_ROW_BG_COLOR}] border-y-2 border-black`}
-			style={{ height: RANKING_CONTAINER_HEIGHT }}
+			style={{ minHeight: RANKING_CONTAINER_HEIGHT }}
 		>
 			<div className='flex flex-col flex-3'>
 				{tierList.tiers.map((tier, index) => mapTierRows(tier, index))}
@@ -374,7 +373,7 @@ const RankPage: React.FC = () => {
 						{toggleUserRankingsDiv}
 						{displaySettingsDiv}
 					</div>
-					{unassignedArea}
+					{unassignedItemsArea}
 					{rankingContainer}
 					<div className='flex flex-col sm:flex-row justify-center gap-4 mt-8'>
 						<Button onClick={saveRankings} disabled={isSaving}>

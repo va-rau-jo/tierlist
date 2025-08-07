@@ -11,25 +11,45 @@ import { useDraggable } from '@dnd-kit/core';
 import { TierListItem, TierListItemModel } from '../../../model/TierListItem';
 import Image from 'next/image';
 import { DEFAULT_ITEM_SIZE } from '@/app/constants';
+import ErrorIcon from '@/app/components/ErrorIcon';
+import { ImageLoadStatus, useImageLoader } from '@/app/components/providers/ImageLoaderProvider';
 
 const baseClasses = 'aspect-square flex items-center justify-center font-medium select-none';
 
 const UndraggableItem = (item: TierListItemModel, size: number) => {
+	const { getImageStatus } = useImageLoader();
+
 	const itemStyle = {
 		height: `calc(var(--spacing) * ${size})`,
 		width: `calc(var(--spacing) * ${size})`,
 	};
 
 	let imageDiv = null;
-	if (item.imageUrl) {
+	const imageStatus = getImageStatus(item.imageUrl);
+
+	if (item.imageUrl && imageStatus === ImageLoadStatus.LOADING) {
 		imageDiv = (
-			<Image
-				src={item.imageUrl}
-				height='100'
-				width='100'
-				alt='Tier list item'
-				className='object-cover'
-			/>
+			<div className={`${baseClasses} bg-gray-400 peer text-wrap`} style={itemStyle}>
+				<Image
+					src='/loading.gif'
+					height='50'
+					width='50'
+					alt='Loading...'
+					className='object-cover'
+				/>
+			</div>
+		);
+	} else if (item.imageUrl && imageStatus === ImageLoadStatus.LOADED) {
+		imageDiv = (
+			<div className={`${baseClasses} bg-white peer text-wrap`} style={itemStyle}>
+				<Image
+					src={item.imageUrl}
+					height='100'
+					width='100'
+					alt='Tier list item'
+					className='object-cover'
+				/>
+			</div>
 		);
 	} else {
 		const l = item.name.length;
@@ -45,20 +65,25 @@ const UndraggableItem = (item: TierListItemModel, size: number) => {
 		// console.log(textSize);
 
 		imageDiv = (
-			<span
-				className='text-center w-full wrap-break-word'
-				style={{ fontSize: `${textSizeRem}rem`, lineHeight: `(1 / ${textSizeRem}` }}
-				// style={{ fontSize: `var(--${textSize})`, lineHeight: `var(--${textSize}--line-height)` }}
-			>
-				{item.name}
-			</span>
+			<div className={`${baseClasses} bg-white peer text-wrap`} style={itemStyle}>
+				{item.imageUrl && imageStatus === ImageLoadStatus.FAILED ? (
+					<div className='absolute top-0 right-0 text-red-500 rounded-sm'>
+						<ErrorIcon />
+					</div>
+				) : null}
+				<span
+					className='bg-white text-center w-full wrap-break-word'
+					style={{ fontSize: `${textSizeRem}rem`, lineHeight: `(1 / ${textSizeRem}` }}
+					// style={{ fontSize: `var(--${textSize})`, lineHeight: `var(--${textSize}--line-height)` }}
+				>
+					{item.name}
+				</span>
+			</div>
 		);
 	}
 	return (
 		<div className='relative w-max'>
-			<div className={`${baseClasses} peer bg-white text-wrap`} style={itemStyle}>
-				{imageDiv}
-			</div>
+			{imageDiv}
 
 			<div className='absolute flex justify-center -top-9 left-0 right-0 invisible peer-hover:visible transition-opacity duration-200 text-nowrap'>
 				<span className='bg-gray-800/80 px-2 py-1 rounded text-white font-bold cursor-default'>
@@ -93,7 +118,6 @@ const RenderedItem: React.FC<RenderedItemProps> = ({ item, isDraggable, size }) 
 		touchAction: 'none', // Important for touch devices
 		transform: CSS.Translate.toString(transform),
 	};
-
 	return (
 		<div className='relative h-fit' ref={setNodeRef} style={style} {...listeners} {...attributes}>
 			{UndraggableItem(item, size)}

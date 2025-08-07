@@ -42,15 +42,15 @@ const TierRow: React.FC<TierRowProps> = ({ tier, index, items, itemSize }) => {
 		<div
 			ref={setNodeRef}
 			id={tier.id}
-			className={`flex grow-1 sm:flex-row items-center h-30 border-x-4 border-y-2 border-black`}
+			className={`flex grow-1 sm:flex-row items-center border-x-4 border-y-2 border-black`}
 		>
 			<div
 				style={coloredSquareStyle}
-				className='h-full aspect-square flex items-center justify-center'
+				className='min-h-30 h-full min-w-30 w-fit flex items-center justify-center'
 			>
 				{tier.name}
 			</div>
-			<div className='flex flex-1 h-full'>
+			<div className='flex flex-1 h-full min-h-30'>
 				{Array.from(items.entries()).map(([userName, items], i) => (
 					<div
 						key={i}

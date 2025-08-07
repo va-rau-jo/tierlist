@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-// import { AuthProvider } from './config/AuthContext';
 import { FirebaseProvider } from './components/providers/FirebaseProvider';
 import { PopupProvider } from './components/providers/PopupProvider';
 import { UserNamesProvider } from './components/providers/UserNamesProvider';
 import GlobalPopup from './components/popup/GlobalPopup';
+import { ImageLoaderProvider } from './components/providers/ImageLoaderProvider';
 
 const geistSans = Geist({
 	variable: '--font-geist-sans',
@@ -38,9 +38,11 @@ export default function RootLayout({
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
 				<FirebaseProvider>
 					<UserNamesProvider>
-						<PopupProvider>
-							{children} <GlobalPopup />
-						</PopupProvider>
+						<ImageLoaderProvider>
+							<PopupProvider>
+								{children} <GlobalPopup />
+							</PopupProvider>
+						</ImageLoaderProvider>
 					</UserNamesProvider>
 				</FirebaseProvider>
 			</body>

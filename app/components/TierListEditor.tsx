@@ -125,6 +125,8 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 	const handleAddItem = () => {
 		if (!currentAddItem.name) {
 			showPopup('Item name is required.', 'error');
+		} else if (currentAddItem.imageUrl && !currentAddItem.imageUrl.startsWith('http')) {
+			showPopup('Invalid URL provided.', 'error');
 		} else {
 			setItems([...items, currentAddItem]);
 			setCurrentAddItem(createNewTierListItem());

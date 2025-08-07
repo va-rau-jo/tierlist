@@ -24,7 +24,6 @@ export const UserNamesProvider: React.FC<UserNamesProviderProps> = ({ children }
 
 	// Gets the userId from the username map, or returns user not found error.
 	const getUserIdFromMap = (userId: string): string | FirebaseReturnStatus => {
-		console.log(userNamesMapRef);
 		return userNamesMapRef.current.get(userId) || FirebaseReturnStatus.USER_NOT_FOUND_ERROR;
 	};
 
