@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Tier, UNASSIGNED_TIER } from './Tier';
 import { TierListItemModel } from './TierListItem';
-import { Timestamp } from 'firebase/firestore'; // Import Timestamp from Firestore
+import { Timestamp } from 'firebase/firestore';
 
 // Maps a tier id to the items in that tier (a ranking)
 export type TierListRankings = Map<string, TierListItemModel[]>;

@@ -49,7 +49,6 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 			} else if (status === FirebaseReturnStatus.TIER_LIST_NOT_DELETED_ERROR) {
 				showPopup('Error deleting the tierlist.', 'error');
 			} else {
-				console.log('Error deleting tierlist: ' + status);
 				showPopup('Something went wrong.', 'error');
 			}
 			setDeleteButtonText('Delete');

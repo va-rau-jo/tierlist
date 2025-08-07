@@ -12,7 +12,7 @@ const SignInPage: React.FC = () => {
 	// Redirect if already signed in
 	useEffect(() => {
 		if (user) {
-			router.push('/dashboard'); // Or wherever your main app dashboard is
+			router.push('/dashboard');
 		}
 	}, [user, router]);
 

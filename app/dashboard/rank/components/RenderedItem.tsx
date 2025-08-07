@@ -108,7 +108,7 @@ const RenderedItem: React.FC<RenderedItemProps> = ({ item, isDraggable, itemSize
 		cursor: isDragging ? 'grabbing' : 'grab',
 		// Hide this item if being dragged, the DndOverlay will display a copy
 		opacity: isDragging ? '0' : '1',
-		touchAction: 'none', // Important for touch devices
+		touchAction: 'none',
 		transform: CSS.Translate.toString(transform),
 	};
 	return (

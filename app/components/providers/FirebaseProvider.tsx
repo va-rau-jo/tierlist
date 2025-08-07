@@ -1,4 +1,4 @@
-'use client'; // This directive is crucial for client-side hooks in Next.js App Router
+'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
@@ -30,7 +30,6 @@ export function useFirebase() {
 	return context;
 }
 
-// 3. The FirebaseProvider Component
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 	// Google Sign In
 	const [user, setUser] = useState<User | null>(null);
@@ -94,9 +93,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 			console.error('Failed to initialize Firebase or authentication:', error);
 			setIsLoading(false);
 		}
-	}, [firebaseApp]); // Dependency on firebaseApp to prevent re-initialization if already set
+	}, [firebaseApp]);
 
-	// The value provided to the context
 	const contextValue: FirebaseContextType = {
 		db,
 		auth,

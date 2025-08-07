@@ -343,8 +343,6 @@ export const getUserTierLists = async (
 	const userTierListsSnapshot = await getDocs(userTierListsRef);
 	const userTierListIds = userTierListsSnapshot.docs.map((doc) => doc.data().tierListId);
 
-	console.log(userTierListIds);
-
 	if (userTierListIds.length === 0) {
 		return [];
 	}

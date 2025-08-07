@@ -13,11 +13,11 @@ import {
 import { Tier, UNASSIGNED_TIER } from '@/app/model/Tier';
 import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
 import NavBar from '@/app/components/NavBar';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay } from '@dnd-kit/core';
 import { TierRow } from '@/app/dashboard/rank/components/TierRow';
 import { TierList, TierListUserRankings } from '@/app/model/TierList';
 import { useRouter } from 'next/navigation';
-import { TIER_ROW_BG_COLOR, TIER_ROW_HEIGHT } from '@/app/constants';
+import { DEFAULT_ITEM_SIZE, TIER_ROW_BG_COLOR, TIER_ROW_HEIGHT } from '@/app/constants';
 import { AveragesDisplay } from '../components/AveragesDisplay';
 import { usePopup } from '@/app/components/providers/PopupProvider';
 import { Page, PageBody } from '@/app/components/Page';
@@ -48,11 +48,10 @@ const RankPage: React.FC = () => {
 	);
 	// Whether we are displaying the average display.
 	const [isDisplayingAverage, setIsDisplayingAverage] = useState(false);
-	// Tracks the currently dragged item
-	// (hides the original for seamless dragging).
+	// Tracks the currently dragged item (hides the original while dragging).
 	const [activeItemId, setActiveItemId] = useState<string | null>();
-	// Tracks the user selected item size, defaults to
-	const [itemSize, setItemSize] = useState(15);
+	// Tracks the user selected item size.
+	const [itemSize, setItemSize] = useState(DEFAULT_ITEM_SIZE);
 
 	const activeItem = useMemo(() => {
 		if (activeItemId && user) {
@@ -92,7 +91,6 @@ const RankPage: React.FC = () => {
 			if (tierList.userRankings) {
 				// Fetch all usernames of userIds in userRankings
 				await Promise.all(tierList.userRankings.keys().map((userId) => fetchUserName(userId)));
-
 				if (tierList.userRankings.has(user.uid)) {
 					userRankingSet = true;
 				}
@@ -186,14 +184,6 @@ const RankPage: React.FC = () => {
 			return newTierItems;
 		});
 		setActiveItemId(null); // Reset active ID when drag ends
-	};
-
-	const handleDragCancel = () => {
-		setActiveItemId(null); // Reset active ID if drag is cancelled
-	};
-
-	const handleDragStart = (event: DragStartEvent) => {
-		setActiveItemId(event.active.id as string);
 	};
 
 	// Handle when the displayed rankings of a user is changed.
@@ -351,9 +341,9 @@ const RankPage: React.FC = () => {
 	return (
 		<Page>
 			<DndContext
-				onDragStart={handleDragStart}
+				onDragStart={(event) => setActiveItemId(event.active.id as string)}
 				onDragEnd={handleDragEnd}
-				onDragCancel={handleDragCancel}
+				onDragCancel={() => setActiveItemId(null)}
 			>
 				<NavBar />
 				<PageBody>
