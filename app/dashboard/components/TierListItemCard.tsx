@@ -1,6 +1,6 @@
 // Represents a tier list when displayed in a list of tier lists.
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TierList } from '../../model/TierList';
 import { ActionButton } from '../../components/Button';
 import Link from 'next/link';
@@ -8,6 +8,7 @@ import { getInitials, truncateText } from '../../utils';
 import { useFirebase } from '@/app/components/providers/FirebaseProvider';
 import { deleteTierList, FirebaseReturnStatus, leaveTierList } from '@/app/firebase/firebase_utils';
 import { usePopup } from '@/app/components/providers/PopupProvider';
+import { useUserNames } from '@/app/components/providers/UserNamesProvider';
 
 interface TierListItemCardProps {
 	tierList: TierList;
@@ -25,20 +26,33 @@ const ActionButtonContainer: React.FC<{ children: React.ReactNode; className?: s
 const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCallback }) => {
 	const { db, user } = useFirebase();
 	const { showPopup } = usePopup();
+	const { fetchUserName } = useUserNames();
 	const [deleteButtonText, setDeleteButtonText] = useState('Delete');
 	const [leaveButtonText, setLeaveButtonText] = useState('Leave');
+
+	const [creatorUserName, setCreatorUserName] = useState('');
+
+	useEffect(() => {
+		if (db && tierList.creatorId) {
+			fetchUserName(tierList.creatorId).then((name) => {
+				if (typeof name === 'string') {
+					setCreatorUserName(name);
+				}
+			});
+		}
+	}, [db, fetchUserName, tierList.creatorId]);
 
 	if (!db || !user) {
 		return;
 	}
+
+	const creatorInitials = getInitials(creatorUserName);
 
 	const lastUpdateDate = tierList.lastUpdatedAt.toDate().toLocaleDateString('en-US', {
 		year: 'numeric',
 		month: 'long',
 		day: 'numeric',
 	});
-
-	const initials = getInitials(tierList.creatorName);
 
 	const handleDeleteOnClick = () => {
 		setDeleteButtonText('Deleting...');
@@ -105,13 +119,15 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 				<section className='flex justify-around'>
 					<div className='flex items-center mb-2 space-x-2 w-full'>
 						<div className='flex items-center justify-center h-14 w-14 bg-red-500'>
-							<span className='text-white font-bold text-2xl tracking-widest'>{initials}</span>
+							<span className='text-white font-bold text-2xl tracking-widest'>
+								{creatorInitials}
+							</span>
 						</div>
 						<div className='text-sm md:text-base text-nowrap tracking-tight'>
 							<p className='text-gray-600 dark:text-gray-400'>
 								Created by{' '}
 								<span className='font-semibold text-blue-600 dark:text-blue-400'>
-									{tierList.creatorName}
+									{creatorUserName}
 								</span>
 							</p>
 							<p className='text-gray-600 dark:text-gray-400'>

@@ -8,6 +8,7 @@ import { FirebaseReturnStatus } from '@/app/firebase/firebase_utils';
 interface UserNamesContextType {
 	getUserName: (userId: string) => string | FirebaseReturnStatus;
 	fetchUserName: (userId: string) => Promise<string | FirebaseReturnStatus>;
+	refreshUserName: (userId: string) => Promise<void>;
 }
 
 const UserNamesContext = createContext<UserNamesContextType | undefined>(undefined);
@@ -49,15 +50,34 @@ export const UserNamesProvider: React.FC<UserNamesProviderProps> = ({ children }
 			}
 
 			const name = docSnap.data()?.name;
+			console.log(userNamesMapRef);
 			userNamesMapRef.current.set(userId, name);
+			console.log('FETECHED NAME: ', name);
+			console.log(userNamesMapRef);
+
 			return name;
 		},
 		[db]
 	);
 
+	// Force an update (like when we update the user's name in the profile page).
+	const refreshUserName = useCallback(
+		async (userId: string) => {
+			console.log(userId);
+			const deleted = userNamesMapRef.current.delete(userId);
+			console.log('Delete successful:', deleted);
+			console.log('Current map:', userNamesMapRef.current);
+			console.log('Deleted ' + userId);
+			console.log(userNamesMapRef);
+			await fetchUserName(userId);
+		},
+		[fetchUserName]
+	);
+
 	const contextValue = {
 		getUserName,
 		fetchUserName,
+		refreshUserName,
 	};
 
 	return <UserNamesContext.Provider value={contextValue}>{children}</UserNamesContext.Provider>;

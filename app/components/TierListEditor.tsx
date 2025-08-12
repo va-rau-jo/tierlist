@@ -200,7 +200,6 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 
 		let newTierList = new TierList(
 			user.uid,
-			user.displayName || '',
 			isPrivate,
 			new Set(newEditorIds),
 			new Set(newRankerIds),

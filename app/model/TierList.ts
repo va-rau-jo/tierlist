@@ -16,8 +16,6 @@ export class TierList {
 	id: string;
 	// User id of the creator
 	creatorId: string;
-	// Name of the creator.
-	creatorName: string;
 	// Whether the tierlist is private
 	isPrivate: boolean;
 	// Ids of allowed editors
@@ -42,7 +40,6 @@ export class TierList {
 
 	constructor(
 		creatorId: string,
-		creatorName: string,
 		isPrivate: boolean,
 		editorIds: Set<string>,
 		rankerIds: Set<string>,
@@ -56,7 +53,6 @@ export class TierList {
 	) {
 		this.id = '';
 		this.creatorId = creatorId;
-		this.creatorName = creatorName;
 		this.isPrivate = isPrivate;
 		this.editorIds = editorIds;
 		this.rankerIds = rankerIds;
@@ -73,7 +69,6 @@ export class TierList {
 		return {
 			id: this.id,
 			creatorId: this.creatorId,
-			creatorName: this.creatorName,
 			isPrivate: this.isPrivate,
 			editorIds: Array.from(this.editorIds),
 			rankerIds: Array.from(this.rankerIds),
@@ -137,7 +132,6 @@ export class TierList {
 
 		const tierlist = new TierList(
 			obj.creatorId,
-			obj.creatorName,
 			obj.isPrivate,
 			new Set(obj.editorIds),
 			new Set(obj.rankerIds),

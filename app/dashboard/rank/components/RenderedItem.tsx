@@ -10,7 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useDraggable } from '@dnd-kit/core';
 import { TierListItem, TierListItemModel } from '../../../model/TierListItem';
 import Image from 'next/image';
-import ErrorIcon from '@/app/components/ErrorIcon';
+import ErrorIcon from '@/app/components/icons/ErrorIcon';
 import { ImageLoadStatus, useImageLoader } from '@/app/components/providers/ImageLoaderProvider';
 import { truncateText } from '@/app/utils';
 import { DEFAULT_ITEM_SIZE } from '@/app/constants';

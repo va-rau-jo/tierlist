@@ -43,6 +43,37 @@ export const shouldRedirectToLogin = (
 	return !isLoading && (!user || !db);
 };
 
+export const updateUserName = async (
+	userId: string,
+	newName: string,
+	db: ReturnType<typeof getFirestore>
+): Promise<FirebaseReturnStatus> => {
+	/**
+	 * Updates a user's name in Firebase
+	 * @param userId - The ID of the user whose name to update
+	 * @param newName - The new name to set for the user
+	 * @param db - The Firebase database instance
+	 * @returns Promise that resolves to a FirebaseReturnStatus indicating success or failure
+	 */
+	const userDoc = doc(db, getUserPublicDetailsPath(userId));
+	const userSnapshot = await getDoc(userDoc);
+
+	if (!userSnapshot.exists()) {
+		return FirebaseReturnStatus.USER_NOT_FOUND_ERROR;
+	}
+
+	try {
+		await updateDoc(userDoc, {
+			name: newName,
+			lastUpdatedAt: serverTimestamp(),
+		});
+		return FirebaseReturnStatus.OK;
+	} catch (error) {
+		console.error('Error updating username:', error);
+		return FirebaseReturnStatus.USER_NOT_FOUND_ERROR;
+	}
+};
+
 export const addTierList = async (
 	newTierList: TierList,
 	user: User,
@@ -355,47 +386,4 @@ export const getUserTierLists = async (
 	const tierListsRef = collection(db, TIERLIST_COLLECTION_NAME);
 	const q = query(tierListsRef, where('__name__', 'in', validTierListIds));
 	return (await getDocs(q)).docs.map((doc) => TierList.fromFirebase(doc.data()));
-};
-
-export const getUserNameFromUserId = async (
-	userId: string,
-	db: ReturnType<typeof getFirestore>
-): Promise<string | FirebaseReturnStatus> => {
-	const userDoc = doc(db, getUserPublicDetailsPath(userId));
-	const userSnapshot = await getDoc(userDoc);
-
-	if (!userSnapshot.exists()) {
-		return FirebaseReturnStatus.USER_NOT_FOUND_ERROR;
-	}
-
-	const userData = userSnapshot.data();
-	return userData.name;
-};
-
-export const getUserNamesFromUserIds = async (
-	userIdsSet: Set<string>,
-	db: ReturnType<typeof getFirestore>
-): Promise<Map<string, string | FirebaseReturnStatus>> => {
-	const userIdToNameMap = new Map<string, string>();
-	if (userIdsSet.size === 0) {
-		return userIdToNameMap;
-	}
-
-	const promises = Array.from(userIdsSet).map(async (userId) => {
-		const userDoc = doc(db, getUserPublicDetailsPath(userId));
-		const userSnapshot = await getDoc(userDoc);
-
-		if (!userSnapshot.exists()) {
-			return [userId, FirebaseReturnStatus.USER_NOT_FOUND_ERROR] as const;
-		}
-		const userData = userSnapshot.data();
-		return [userId, userData.name] as const;
-	});
-
-	const results = await Promise.all(promises);
-	results.forEach(([userId, name]) => {
-		userIdToNameMap.set(userId, name);
-	});
-
-	return userIdToNameMap;
 };

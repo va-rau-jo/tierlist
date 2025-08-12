@@ -15,7 +15,8 @@ import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
 import { TIER_ROW_HEIGHT } from '@/app/constants';
 import { ReactNode, useState } from 'react';
 import Image from 'next/image';
-import CloseIcon from '../../../components/CloseIcon';
+import CloseIcon from '@/app/components/icons/CloseIcon';
+
 import { ImageLoadStatus, useImageLoader } from '@/app/components/providers/ImageLoaderProvider';
 
 class ItemStatus {

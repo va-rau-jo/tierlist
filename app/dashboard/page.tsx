@@ -60,9 +60,12 @@ const DashboardPage: React.FC = () => {
 	// User and DB are confirmed not null
 	if (isLoading || !user || !db || isLoadingTierLists) {
 		return (
-			<div className='flex items-center justify-center min-h-screen'>
-				<p>Loading dashboard...</p>
-			</div>
+			<Page className='flex flex-col items-center'>
+				<NavBar />
+				<div className='flex items-center justify-center min-h-screen'>
+					<p>Loading dashboard...</p>
+				</div>
+			</Page>
 		);
 	}
 
