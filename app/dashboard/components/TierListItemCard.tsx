@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { TierList } from '../../model/TierList';
 import { ActionButton } from '../../components/Button';
 import Link from 'next/link';
-import { getInitials, truncateText } from '../../utils';
+import { getInitials } from '../../utils';
 import { useFirebase } from '@/app/components/providers/FirebaseProvider';
 import { deleteTierList, FirebaseReturnStatus, leaveTierList } from '@/app/firebase/firebase_utils';
 import { usePopup } from '@/app/components/providers/PopupProvider';
@@ -15,21 +15,12 @@ interface TierListItemCardProps {
 	refreshCallback: () => void;
 }
 
-// Displays the create and join actions at the top of the page.
-const ActionButtonContainer: React.FC<{ children: React.ReactNode; className?: string }> = ({
-	children,
-	className,
-}) => {
-	return <div className={`${className} z-10`}>{children}</div>;
-};
-
 const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCallback }) => {
 	const { db, user } = useFirebase();
 	const { showPopup } = usePopup();
 	const { fetchUserName } = useUserNames();
 	const [deleteButtonText, setDeleteButtonText] = useState('Delete');
 	const [leaveButtonText, setLeaveButtonText] = useState('Leave');
-
 	const [creatorUserName, setCreatorUserName] = useState('');
 
 	useEffect(() => {
@@ -43,18 +34,20 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 	}, [db, fetchUserName, tierList.creatorId]);
 
 	if (!db || !user) {
-		return;
+		return null;
 	}
 
-	const creatorInitials = getInitials(creatorUserName);
+	const creatorInitials = getInitials(creatorUserName) || '?';
 
 	const lastUpdateDate = tierList.lastUpdatedAt.toDate().toLocaleDateString('en-US', {
 		year: 'numeric',
-		month: 'long',
+		month: 'short',
 		day: 'numeric',
 	});
 
-	const handleDeleteOnClick = () => {
+	const handleDeleteOnClick = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
 		setDeleteButtonText('Deleting...');
 		deleteTierList(tierList.id, user.uid, db).then((status) => {
 			if (status === FirebaseReturnStatus.OK) {
@@ -69,7 +62,9 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 		});
 	};
 
-	const handleLeaveOnClick = () => {
+	const handleLeaveOnClick = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
 		setLeaveButtonText('Leaving...');
 		leaveTierList(tierList.id, user.uid, db).then((status) => {
 			if (status === FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR) {
@@ -82,7 +77,9 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 		});
 	};
 
-	const handleShareOnClick = () => {
+	const handleShareOnClick = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
 		navigator.clipboard.writeText(tierList.id);
 		showPopup(
 			`Add them as a ranker, and have them join using ID: ${tierList.id} (copied).`,
@@ -91,80 +88,92 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 		);
 	};
 
-	const privateDivBaseClasses = 'absolute top-1 right-1 text-sm font-bold rounded-full px-2 py-1';
 	const canEdit = tierList.creatorId === user.uid || tierList.editorIds.has(user.uid);
+
 	return (
-		<div className='relative bg-white/50 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden w-full'>
+		<article className='group relative flex min-w-0 flex-col gap-3 rounded-lg border border-slate-200/90 bg-[var(--board-card)] p-3 shadow-sm transition-shadow hover:shadow-md'>
 			<Link
-				className='px-4 py-2 absolute w-full h-full'
 				href={`/dashboard/rank/${tierList.id}`}
-			></Link>
-			<div className='flex flex-col items-center px-2 py-2 sm:px-4 cursor-pointer'>
-				{tierList.isPrivate ? (
-					<div className={`${privateDivBaseClasses} bg-red-200`}>Private</div>
-				) : (
-					<div className={`${privateDivBaseClasses} bg-blue-200`}>Public</div>
-				)}
+				className='absolute inset-0 z-0 rounded-lg'
+				aria-label={`Open ${tierList.name}`}
+			/>
+
+			<div className='relative z-10 pointer-events-none flex min-w-0 items-start justify-between gap-2'>
 				<h3
-					className='text-xl md:text-2xl lg:text-3xl text-center font-bold text-gray-900 dark:text-white line-clamp-2'
+					className='min-w-0 flex-1 break-words text-sm font-semibold leading-snug text-slate-900 line-clamp-2'
 					title={tierList.name}
 				>
-					{truncateText(tierList.name, 30)}
+					{tierList.name}
 				</h3>
-				<div className='my-2'>
-					<p className='text-gray-700 dark:text-gray-300 text-base md:text-lg line-clamp-3'>
-						{truncateText(tierList.description, 175)}
-					</p>
-				</div>
-				<section className='flex justify-around'>
-					<div className='flex items-center mb-2 space-x-2 w-full'>
-						<div className='flex items-center justify-center h-14 w-14 bg-red-500'>
-							<span className='text-white font-bold text-2xl tracking-widest'>
-								{creatorInitials}
-							</span>
-						</div>
-						<div className='text-sm md:text-base text-nowrap tracking-tight'>
-							<p className='text-gray-600 dark:text-gray-400'>
-								Created by{' '}
-								<span className='font-semibold text-blue-600 dark:text-blue-400'>
-									{creatorUserName}
-								</span>
-							</p>
-							<p className='text-gray-600 dark:text-gray-400'>
-								Last Updated:{' '}
-								<span className='font-semibold dark:text-blue-400'>{lastUpdateDate}</span>
-							</p>
-						</div>
-					</div>
-					{/* Actions like View, Edit, Share */}
-					<div className='text-sm md:text-base flex flex-wrap my-auto w-full ml-6 py-1 justify-center'>
-						{canEdit && (
-							<ActionButtonContainer className='m-0.5'>
-								<Link href={`/dashboard/edit/${tierList.id}`}>
-									<ActionButton variant='outline'>Edit</ActionButton>
-								</Link>
-							</ActionButtonContainer>
-						)}
-						<ActionButtonContainer className='m-0.5'>
-							<ActionButton onClick={handleShareOnClick} variant='outline'>
-								Share
-							</ActionButton>
-						</ActionButtonContainer>
-						<ActionButtonContainer className='m-0.5'>
-							{tierList.creatorId === user.uid ? (
-								<ActionButton onClick={handleDeleteOnClick} variant='outline'>
-									{deleteButtonText}
-								</ActionButton>
-							) : (
-								<ActionButton onClick={handleLeaveOnClick} variant='outline'>
-									{leaveButtonText}
-								</ActionButton>
-							)}
-						</ActionButtonContainer>
-					</div>
-				</section>
+				<span
+					className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+						tierList.isPrivate
+							? 'bg-rose-100 text-rose-700'
+							: 'bg-emerald-100 text-emerald-700'
+					}`}
+				>
+					{tierList.isPrivate ? 'Private' : 'Public'}
+				</span>
 			</div>
-		</div>
+
+			{tierList.description ? (
+				<p
+					className='relative z-10 pointer-events-none min-w-0 break-words text-xs leading-relaxed text-slate-500 line-clamp-2'
+					title={tierList.description}
+				>
+					{tierList.description}
+				</p>
+			) : null}
+
+			<div className='relative z-10 mt-auto flex min-w-0 items-center gap-2 border-t border-slate-100 pt-2'>
+				<div
+					className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold tracking-wide text-white'
+					title={creatorUserName}
+				>
+					{creatorInitials.slice(0, 2).toUpperCase()}
+				</div>
+				<div className='min-w-0 flex-1'>
+					<p className='truncate text-xs text-slate-600' title={creatorUserName}>
+						{creatorUserName || 'Unknown'}
+					</p>
+					<p className='truncate text-[11px] text-slate-400'>Updated {lastUpdateDate}</p>
+				</div>
+			</div>
+
+			<div className='relative z-10 flex min-w-0 flex-wrap gap-1.5'>
+				{canEdit && (
+					<Link href={`/dashboard/edit/${tierList.id}`} className='pointer-events-auto'>
+						<ActionButton variant='outline' className='!px-2.5 !py-0.5 !text-xs !shadow-none'>
+							Edit
+						</ActionButton>
+					</Link>
+				)}
+				<ActionButton
+					onClick={handleShareOnClick}
+					variant='outline'
+					className='pointer-events-auto !px-2.5 !py-0.5 !text-xs !shadow-none'
+				>
+					Share
+				</ActionButton>
+				{tierList.creatorId === user.uid ? (
+					<ActionButton
+						onClick={handleDeleteOnClick}
+						variant='outline'
+						className='pointer-events-auto !px-2.5 !py-0.5 !text-xs !shadow-none'
+					>
+						{deleteButtonText}
+					</ActionButton>
+				) : (
+					<ActionButton
+						onClick={handleLeaveOnClick}
+						variant='outline'
+						className='pointer-events-auto !px-2.5 !py-0.5 !text-xs !shadow-none'
+					>
+						{leaveButtonText}
+					</ActionButton>
+				)}
+			</div>
+		</article>
 	);
 };
 

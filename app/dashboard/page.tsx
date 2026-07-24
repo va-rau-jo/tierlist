@@ -18,17 +18,44 @@ import { Input } from '../components/Input';
 import { usePopup } from '../components/providers/PopupProvider';
 import { Page } from '../components/Page';
 
-// Displays the create and join actions at the top of the page.
-const ActionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const JOIN_BUTTON_DEFAULT_TEXT = 'Join';
+const JOIN_BUTTON_JOINING_TEXT = 'Joining...';
+
+interface BoardColumnProps {
+	title: string;
+	count: number;
+	children: React.ReactNode;
+	emptyMessage: string;
+	isEmpty: boolean;
+}
+
+const BoardColumn: React.FC<BoardColumnProps> = ({
+	title,
+	count,
+	children,
+	emptyMessage,
+	isEmpty,
+}) => {
 	return (
-		<div className='flex flex-1 flex-col justify-center items-center rounded-lg border border-dashed border-black/25 w-full h-full space-y-2 pt-2 pb-4'>
-			{children}
-		</div>
+		<section className='flex min-h-[28rem] min-w-0 flex-1 flex-col rounded-xl bg-[var(--board-column)]/80 p-3'>
+			<header className='mb-3 flex items-center justify-between gap-2 px-1'>
+				<h2 className='min-w-0 truncate text-sm font-semibold uppercase tracking-wide text-slate-600'>
+					{title}
+				</h2>
+				<span className='shrink-0 rounded-full bg-slate-500/15 px-2 py-0.5 text-xs font-medium text-slate-600'>
+					{count}
+				</span>
+			</header>
+			<div className='flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto'>
+				{isEmpty ? (
+					<p className='px-1 py-8 text-center text-sm text-slate-500'>{emptyMessage}</p>
+				) : (
+					children
+				)}
+			</div>
+		</section>
 	);
 };
-
-const JOIN_BUTTON_DEFAULT_TEXT = 'Join Tierlist';
-const JOIN_BUTTON_JOINING_TEXT = 'Joining...';
 
 const DashboardPage: React.FC = () => {
 	const { db, isLoading, user } = useFirebase();
@@ -40,7 +67,6 @@ const DashboardPage: React.FC = () => {
 	const [joinTierListText, setJoinTierListText] = React.useState(JOIN_BUTTON_DEFAULT_TEXT);
 
 	useEffect(() => {
-		// User and DB are confirmed not null
 		if (isLoading || !user || !db) {
 			return;
 		}
@@ -57,13 +83,12 @@ const DashboardPage: React.FC = () => {
 		return;
 	}
 
-	// User and DB are confirmed not null
 	if (isLoading || !user || !db || isLoadingTierLists) {
 		return (
-			<Page className='flex flex-col items-center'>
+			<Page className='flex flex-col'>
 				<NavBar />
-				<div className='flex items-center justify-center min-h-screen'>
-					<p>Loading dashboard...</p>
+				<div className='flex flex-1 items-center justify-center'>
+					<p className='text-sm text-slate-500'>Loading board...</p>
 				</div>
 			</Page>
 		);
@@ -102,72 +127,73 @@ const DashboardPage: React.FC = () => {
 	};
 
 	return (
-		<Page className='flex flex-col items-center'>
+		<Page className='flex flex-col'>
 			<NavBar />
-			<div
-				className='flex justify-center items-center flex-1 flex-col px-8 mt-16 max-w-5xl'
-				style={{ maxWidth: '95vw' }}
-			>
-				<section className='flex w-full h-25 space-x-2 justify-center items-center'>
-					<ActionHeader>
-						<span className='text-base sm:text-lg md:text-xl w-fit h-fit text-center'>
-							Create your own tierlist!
-						</span>
-						<Link href={'/dashboard/create'}>
-							<ActionButton className='text-nowrap' variant='primary'>
-								Create New Tierlist
+			<main className='mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-5 sm:px-6'>
+				<div className='flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between'>
+					<div className='min-w-0'>
+						<h1 className='truncate text-lg font-semibold text-slate-900'>Your boards</h1>
+						<p className='text-sm text-slate-500'>Create a list or join one with an ID.</p>
+					</div>
+					<div className='flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center'>
+						<Link href='/dashboard/create' className='shrink-0'>
+							<ActionButton variant='primary' className='w-full sm:w-auto'>
+								Create tier list
 							</ActionButton>
 						</Link>
-					</ActionHeader>
-					<ActionHeader>
-						<span className='text-base sm:text-lg md:text-xl w-fit h-fit text-center'>
-							Get a tierlist ID from a friend to join!
-						</span>
-						<div className='flex justify-center items-center space-x-2'>
-							<Input
-								label=''
-								id={'join'}
-								value={joinTierListId}
-								onChange={(e) => setJoinTierListId(e.target.value)}
-								placeholder='Tierlist ID'
-								className='w-full p-2 border border-black rounded-md shadow-sm focus:border-indigo-500 sm:text-sm'
-							/>
+						<div className='flex min-w-0 flex-1 items-center gap-2'>
+							<div className='min-w-0 flex-1'>
+								<Input
+									label=''
+									id='join'
+									value={joinTierListId}
+									onChange={(e) => setJoinTierListId(e.target.value)}
+									placeholder='Paste tier list ID'
+									className='w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm shadow-none focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
+								/>
+							</div>
 							<ActionButton
 								onClick={joinTierListOnClick}
-								variant='primary'
-								className='text-nowrap h-fit'
+								variant='secondary'
+								className='shrink-0'
 							>
 								{joinTierListText}
 							</ActionButton>
 						</div>
-					</ActionHeader>
-				</section>
-				<section className='flex flex-1 flex-col w-full mx-16 mt-8 items-center'>
-					<h1> Your Tierlists</h1>
-					{userTierLists.length == 0 ? (
-						<p className='text-gray-500 italic mt-4'>
-							No tierlists found. Create one to get started!
-						</p>
-					) : (
-						<div className='flex flex-col items-center w-full space-y-2 px-16'>
-							{userCreatedTierLists.map((tierList: TierList) => (
-								<TierListItemCard
-									key={tierList.id}
-									tierList={tierList}
-									refreshCallback={refreshTierLists}
-								/>
-							))}
-							{otherTierLists.map((tierList: TierList) => (
-								<TierListItemCard
-									key={tierList.id}
-									tierList={tierList}
-									refreshCallback={refreshTierLists}
-								/>
-							))}
-						</div>
-					)}
-				</section>
-			</div>
+					</div>
+				</div>
+
+				<div className='grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2'>
+					<BoardColumn
+						title='Created by you'
+						count={userCreatedTierLists.length}
+						isEmpty={userCreatedTierLists.length === 0}
+						emptyMessage='No lists yet. Create one to get started.'
+					>
+						{userCreatedTierLists.map((tierList: TierList) => (
+							<TierListItemCard
+								key={tierList.id}
+								tierList={tierList}
+								refreshCallback={refreshTierLists}
+							/>
+						))}
+					</BoardColumn>
+					<BoardColumn
+						title='Shared with you'
+						count={otherTierLists.length}
+						isEmpty={otherTierLists.length === 0}
+						emptyMessage='Join a list with an ID from a friend.'
+					>
+						{otherTierLists.map((tierList: TierList) => (
+							<TierListItemCard
+								key={tierList.id}
+								tierList={tierList}
+								refreshCallback={refreshTierLists}
+							/>
+						))}
+					</BoardColumn>
+				</div>
+			</main>
 		</Page>
 	);
 };
