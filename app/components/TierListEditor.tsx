@@ -275,29 +275,35 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		<div className={editorContainerStyle}>
 			<h2 className='text-center text-xl'>Add Editors</h2>
 			<div className='flex flex-col flex-1 space-y-2 p-4'>
-				{editorIds.map((userId, index) => (
-					<div key={index} className='flex items-center gap-2 ml-8'>
-						<i
-							className={`fas fa-trash trashcan-icon cursor-pointer ${
-								index === 0 ? 'invisible' : ''
-							}`}
-							onClick={() => {
-								const newEditorIds = editorIds.filter((_, i) => i !== index);
-								setEditorIds(newEditorIds);
-							}}
-						/>
-						<Input
-							label=''
-							id={`user-${index}`}
-							value={userId}
-							onChange={(e) => handleEditorIdsChange(e, index)}
-							placeholder="Enter the user's ID"
-							additionalClassNames='flex-grow'
-							disabled={index === 0}
-						/>
-						{renderUserNameMessage(userId)}
-					</div>
-				))}
+				{editorIds.map((userId, index) => {
+					// Owner is always first and non-editable; hide on create.
+					if (mode === TierListEditorMode.Create && index === 0) {
+						return null;
+					}
+					return (
+						<div key={index} className='flex items-center gap-2 ml-8'>
+							<i
+								className={`fas fa-trash trashcan-icon cursor-pointer ${
+									index === 0 ? 'invisible' : ''
+								}`}
+								onClick={() => {
+									const newEditorIds = editorIds.filter((_, i) => i !== index);
+									setEditorIds(newEditorIds);
+								}}
+							/>
+							<Input
+								label=''
+								id={`user-${index}`}
+								value={userId}
+								onChange={(e) => handleEditorIdsChange(e, index)}
+								placeholder="Enter the user's ID"
+								additionalClassNames='flex-grow'
+								disabled={index === 0}
+							/>
+							{renderUserNameMessage(userId)}
+						</div>
+					);
+				})}
 				<div className='flex justify-center'>
 					<ActionButton variant='outline' onClick={() => setEditorIds([...editorIds, ''])}>
 						Add New Editor
