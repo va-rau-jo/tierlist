@@ -1,6 +1,14 @@
 'use client';
 
-import React, { createContext, useContext, useCallback, ReactNode, useState } from 'react';
+import React, {
+	createContext,
+	useContext,
+	useCallback,
+	useEffect,
+	ReactNode,
+	useState,
+	useRef,
+} from 'react';
 
 export const enum ImageLoadStatus {
 	LOADED = 'loaded',
@@ -10,6 +18,7 @@ export const enum ImageLoadStatus {
 
 interface ImageLoaderContextType {
 	getImageStatus: (imageUrl: string) => ImageLoadStatus;
+	ensureImageLoaded: (imageUrl: string) => void;
 }
 
 const ImageLoaderContext = createContext<ImageLoaderContextType | undefined>(undefined);
@@ -19,65 +28,70 @@ interface ImageLoaderProviderProps {
 }
 
 export const ImageLoaderProvider: React.FC<ImageLoaderProviderProps> = ({ children }) => {
-	// Maps imageUrl to the status of the image
 	const [imageMap, setImageMap] = useState<Map<string, ImageLoadStatus>>(new Map());
+	const imageMapRef = useRef(imageMap);
+	imageMapRef.current = imageMap;
+	const pendingLoads = useRef(new Set<string>());
 
 	const updateMap = (imageUrl: string, status: ImageLoadStatus) => {
 		setImageMap((prevMap) => new Map(prevMap).set(imageUrl, status));
 	};
 
-	// Function to fetch an image and add it to the cache
-	const fetchImage = useCallback(
-		async (imageUrl: string) => {
-			try {
-				if (imageMap.has(imageUrl)) {
-					return;
-				}
-				const response = await fetch(imageUrl);
-				if (response.ok) {
-					const contentType = response.headers.get('Content-Type');
-					if (contentType && contentType.startsWith('image/')) {
-						updateMap(imageUrl, ImageLoadStatus.LOADED);
-						return;
-					}
-				}
-				updateMap(imageUrl, ImageLoadStatus.FAILED);
-			} catch {
-				updateMap(imageUrl, ImageLoadStatus.FAILED);
-			}
-		},
-		[imageMap]
-	);
+	// Load via Image() so cross-origin URLs work without CORS (unlike fetch).
+	const ensureImageLoaded = useCallback((imageUrl: string) => {
+		if (!imageUrl || imageMapRef.current.has(imageUrl) || pendingLoads.current.has(imageUrl)) {
+			return;
+		}
 
-	// Function to get an image and add it to the cache
+		pendingLoads.current.add(imageUrl);
+		updateMap(imageUrl, ImageLoadStatus.LOADING);
+
+		const img = new window.Image();
+		img.onload = () => {
+			pendingLoads.current.delete(imageUrl);
+			updateMap(imageUrl, ImageLoadStatus.LOADED);
+		};
+		img.onerror = () => {
+			pendingLoads.current.delete(imageUrl);
+			updateMap(imageUrl, ImageLoadStatus.FAILED);
+		};
+		img.src = imageUrl;
+	}, []);
+
+	// Read-only: never start loads or setState here (callers must use ensureImageLoaded in an effect).
 	const getImageStatus = useCallback(
 		(imageUrl: string): ImageLoadStatus => {
 			if (!imageUrl) {
 				return ImageLoadStatus.FAILED;
 			}
-
-			if (imageMap.has(imageUrl)) {
-				return imageMap.get(imageUrl) || ImageLoadStatus.FAILED;
-			}
-			fetchImage(imageUrl);
-			return ImageLoadStatus.LOADING;
+			return imageMap.get(imageUrl) ?? ImageLoadStatus.LOADING;
 		},
-		[fetchImage, imageMap]
+		[imageMap]
 	);
 
 	const contextValue = {
 		getImageStatus,
-		fetchImage,
+		ensureImageLoaded,
 	};
 
 	return <ImageLoaderContext.Provider value={contextValue}>{children}</ImageLoaderContext.Provider>;
 };
 
-// Custom hook to consume the context easily
 export const useImageLoader = () => {
 	const context = useContext(ImageLoaderContext);
 	if (context === undefined) {
 		throw new Error('useImageLoader must be used within an ImageLoaderProvider');
 	}
 	return context;
+};
+
+/** Tracks load status for a URL; kicks off loading in an effect (safe during render). */
+export const useImageStatus = (imageUrl: string): ImageLoadStatus => {
+	const { getImageStatus, ensureImageLoaded } = useImageLoader();
+
+	useEffect(() => {
+		ensureImageLoaded(imageUrl);
+	}, [imageUrl, ensureImageLoaded]);
+
+	return getImageStatus(imageUrl);
 };

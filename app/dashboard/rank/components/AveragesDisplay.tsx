@@ -17,7 +17,7 @@ import { ReactNode, useState } from 'react';
 import Image from 'next/image';
 import CloseIcon from '@/app/components/icons/CloseIcon';
 
-import { ImageLoadStatus, useImageLoader } from '@/app/components/providers/ImageLoaderProvider';
+import { ImageLoadStatus, useImageStatus } from '@/app/components/providers/ImageLoaderProvider';
 
 class ItemStatus {
 	item: TierListItem;
@@ -44,49 +44,101 @@ interface AveragesDisplayProps {
 	itemSize: number;
 }
 
+const StatusItemImage: React.FC<{ imageUrl: string }> = ({ imageUrl }) => {
+	const imageStatus = useImageStatus(imageUrl);
+
+	if (imageStatus === ImageLoadStatus.LOADED) {
+		return (
+			<Image
+				src={imageUrl}
+				height='100'
+				width='100'
+				alt='Tier list item'
+				className='object-cover'
+			/>
+		);
+	}
+	if (imageStatus === ImageLoadStatus.LOADING) {
+		return (
+			<Image
+				src='/loading_black.gif'
+				height='100'
+				width='100'
+				alt='Loading...'
+				className='object-cover'
+			/>
+		);
+	}
+	return null;
+};
+
+interface AverageMarkerProps {
+	status: ItemStatus;
+	markerSize: number;
+	tierIndex: number;
+	index: number;
+	displayedItemIndex: number[];
+	onToggle: (index: number[]) => void;
+	popup: ReactNode;
+}
+
+const AverageMarker: React.FC<AverageMarkerProps> = ({
+	status,
+	markerSize,
+	tierIndex,
+	index,
+	displayedItemIndex,
+	onToggle,
+	popup,
+}) => {
+	const imageStatus = useImageStatus(status.item.imageUrl);
+	const showImage =
+		!!status.item.imageUrl && imageStatus !== ImageLoadStatus.FAILED;
+	const isDisplayed =
+		tierIndex === displayedItemIndex[0] && index === displayedItemIndex[1];
+
+	if (showImage) {
+		return (
+			<div className='relative'>
+				<Image
+					src={status.item.imageUrl}
+					alt='Tier list item'
+					width='100'
+					height='100'
+					className='relative rounded-full border-2 border-black cursor-pointer z-100'
+					style={{
+						width: markerSize + 'px',
+						height: markerSize + 'px',
+					}}
+					onClick={() => onToggle([tierIndex, index])}
+				/>
+				{isDisplayed ? popup : null}
+			</div>
+		);
+	}
+
+	return (
+		<div
+			className='relative rounded-full border-2 border-black bg-black cursor-pointer z-100'
+			style={{ width: markerSize + 'px', height: markerSize + 'px' }}
+			onClick={() => onToggle([tierIndex, index])}
+		>
+			{isDisplayed ? popup : null}
+		</div>
+	);
+};
+
 export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
 	tierList,
 	allRankings,
 	itemSize,
 }) => {
-	const { getImageStatus } = useImageLoader();
-
 	// Tuple with [tierIndex, indexWithinTier] that identifies the item to display.
 	const [displayedItemIndex, setDisplayedItemIndex] = useState<number[]>([]);
 
 	const toggleDisplayedItemIndex = (index: number[]) => {
 		const sameIndex = displayedItemIndex[0] === index[0] && displayedItemIndex[1] === index[1];
 		setDisplayedItemIndex(sameIndex ? [] : index);
-	};
-
-	const getImageDiv = (status: ItemStatus): ReactNode => {
-		if (!status.item.imageUrl) {
-			return null;
-		}
-
-		const imageStatus = getImageStatus(status.item.imageUrl);
-		if (imageStatus === ImageLoadStatus.LOADED) {
-			return (
-				<Image
-					src={status.item.imageUrl}
-					height='100'
-					width='100'
-					alt='Tier list item'
-					className='object-cover'
-				/>
-			);
-		} else if (imageStatus === ImageLoadStatus.LOADING) {
-			return (
-				<Image
-					src='/loading_black.gif'
-					height='100'
-					width='100'
-					alt='Loading...'
-					className='object-cover'
-				/>
-			);
-		}
-		return null;
 	};
 
 	// The size of an average marker circle.
@@ -158,7 +210,7 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className='flex space-x-2'>
-					{getImageDiv(status)}
+					{status.item.imageUrl ? <StatusItemImage imageUrl={status.item.imageUrl} /> : null}
 					<div className='flex flex-col min-w-fit justify-center'>
 						<div className='flex justify-end'>
 							<button
@@ -197,43 +249,18 @@ export const AveragesDisplay: React.FC<AveragesDisplayProps> = ({
 				className='absolute flex flex-wrap justify-center space-x-1 space-y-1 ml-4 mr-2'
 				style={{ top: topPx }}
 			>
-				{itemMapping[1].map((status, i) => {
-					// Circle marker in average gradient
-					const imageDiv = getImageDiv(status);
-					if (imageDiv) {
-						return (
-							<div className='relative' key={i}>
-								<Image
-									src={status.item.imageUrl}
-									alt='Tier list item'
-									width='100'
-									height='100'
-									className='relative rounded-full border-2 border-black cursor-pointer z-100'
-									style={{
-										width: markerSize + 'px',
-										height: markerSize + 'px',
-									}}
-									onClick={() => toggleDisplayedItemIndex([tierIndex, i])}
-								/>
-								{tierIndex === displayedItemIndex[0] && i === displayedItemIndex[1]
-									? createItemPopup(status)
-									: null}
-							</div>
-						);
-					}
-					return (
-						<div
-							key={i}
-							className='relative rounded-full border-2 border-black bg-black cursor-pointer z-100'
-							style={{ width: markerSize + 'px', height: markerSize + 'px' }}
-							onClick={() => toggleDisplayedItemIndex([tierIndex, i])}
-						>
-							{tierIndex === displayedItemIndex[0] && i === displayedItemIndex[1]
-								? createItemPopup(status)
-								: null}
-						</div>
-					);
-				})}
+				{itemMapping[1].map((status, i) => (
+					<AverageMarker
+						key={i}
+						status={status}
+						markerSize={markerSize}
+						tierIndex={tierIndex}
+						index={i}
+						displayedItemIndex={displayedItemIndex}
+						onToggle={toggleDisplayedItemIndex}
+						popup={createItemPopup(status)}
+					/>
+				))}
 			</div>
 		);
 	};

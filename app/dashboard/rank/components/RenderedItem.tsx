@@ -11,14 +11,17 @@ import { useDraggable } from '@dnd-kit/core';
 import { TierListItem, TierListItemModel } from '../../../model/TierListItem';
 import Image from 'next/image';
 import ErrorIcon from '@/app/components/icons/ErrorIcon';
-import { ImageLoadStatus, useImageLoader } from '@/app/components/providers/ImageLoaderProvider';
+import { ImageLoadStatus, useImageStatus } from '@/app/components/providers/ImageLoaderProvider';
 import { truncateText } from '@/app/utils';
 import { DEFAULT_ITEM_SIZE } from '@/app/constants';
 
 const baseClasses = 'aspect-square flex items-center justify-center font-medium select-none';
 
-const UndraggableItem = (item: TierListItemModel, itemSize: number) => {
-	const { getImageStatus } = useImageLoader();
+const UndraggableItem: React.FC<{ item: TierListItemModel; itemSize: number }> = ({
+	item,
+	itemSize,
+}) => {
+	const imageStatus = useImageStatus(item.imageUrl);
 
 	const itemStyle = {
 		height: `calc(var(--spacing) * ${itemSize})`,
@@ -26,7 +29,6 @@ const UndraggableItem = (item: TierListItemModel, itemSize: number) => {
 	};
 
 	let imageDiv = null;
-	const imageStatus = getImageStatus(item.imageUrl);
 
 	if (item.imageUrl && imageStatus === ImageLoadStatus.LOADING) {
 		imageDiv = (
@@ -101,7 +103,11 @@ const RenderedItem: React.FC<RenderedItemProps> = ({ item, isDraggable, itemSize
 
 	// TierListItem means this is a different user's ranking, so not draggable.
 	if (item instanceof TierListItem || !isDraggable) {
-		return <div className='relative h-fit'>{UndraggableItem(item, itemSize)}</div>;
+		return (
+			<div className='relative h-fit'>
+				<UndraggableItem item={item} itemSize={itemSize} />
+			</div>
+		);
 	}
 
 	const style = {
@@ -113,7 +119,7 @@ const RenderedItem: React.FC<RenderedItemProps> = ({ item, isDraggable, itemSize
 	};
 	return (
 		<div className='relative h-fit' ref={setNodeRef} style={style} {...listeners} {...attributes}>
-			{UndraggableItem(item, itemSize)}
+			<UndraggableItem item={item} itemSize={itemSize} />
 		</div>
 	);
 };

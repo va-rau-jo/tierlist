@@ -7,20 +7,24 @@ import {
 	FirebaseReturnStatus,
 	updateUserName,
 	shouldRedirectToLogin,
+	doesUsernameExist,
 } from '../firebase/firebase_utils';
 import NavBar from '../components/NavBar';
 import { Page } from '../components/Page';
 import { usePopup } from '../components/providers/PopupProvider';
-import { Button } from '../components/Button';
+import { ActionButton, Button } from '../components/Button';
 import { useUserNames } from '../components/providers/UserNamesProvider';
 
 const DashboardPage: React.FC = () => {
-	const { db, isLoading, user } = useFirebase();
+	const { db, isLoading, user, signOut } = useFirebase();
 	const router = useRouter();
 	const { showPopup } = usePopup();
 	const { fetchUserName, refreshUserName } = useUserNames();
 
 	const [userName, setUserName] = useState<string>('');
+	// The username when the page loads, check so we don't overwrite the already
+	// set username
+	const [startUserName, setStartUserName] = useState<string>('');
 
 	const rerender = () => _setRender(_render + 1);
 	const [_render, _setRender] = useState(0);
@@ -34,9 +38,10 @@ const DashboardPage: React.FC = () => {
 		fetchUserName(user.uid).then((name) => {
 			if (typeof name === 'string') {
 				setUserName(name);
+				setStartUserName(name);
 			}
 		});
-	}, [db, user, isLoading, router, fetchUserName]);
+	}, [db, user, isLoading, router, fetchUserName, startUserName]);
 
 	if (shouldRedirectToLogin(user, db, isLoading)) {
 		router.push('/');
@@ -52,22 +57,31 @@ const DashboardPage: React.FC = () => {
 		);
 	}
 
-	const handleUpdateOnClick = () => {
-		if (userName) {
-			updateUserName(user.uid, userName, db).then((status) => {
-				if (status === FirebaseReturnStatus.OK) {
-					refreshUserName(user.uid).then(() => {
-						rerender();
-						showPopup('Name updated successfully.', 'success');
-					});
-				} else {
-					showPopup('Failed to update name.', 'error');
-				}
-			});
-		} else {
+	const handleUpdateOnClick = async () => {
+		if (!userName) {
 			showPopup('Name cannot be empty.', 'error');
+			return;
+		}
+
+		const usernameExists = await doesUsernameExist(userName, db);
+		if (usernameExists) {
+			showPopup('Username already exists.', 'error');
+			return;
+		}
+
+		// Proceed with update if name is available
+		const status = await updateUserName(user.uid, userName, db);
+		if (status === FirebaseReturnStatus.OK) {
+			await refreshUserName(user.uid);
+			rerender();
+			showPopup('Name updated successfully.', 'success');
+		} else {
+			showPopup('Failed to update name.', 'error');
 		}
 	};
+
+	console.log(startUserName);
+	console.log(userName);
 
 	return (
 		<Page className='flex flex-col items-center'>
@@ -89,11 +103,15 @@ const DashboardPage: React.FC = () => {
 						<Button
 							variant='primary'
 							onClick={handleUpdateOnClick}
+							disabled={userName === startUserName}
 							className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
 						>
 							Update
 						</Button>
 					</div>
+					<ActionButton variant='danger' onClick={signOut}>
+						Sign Out
+					</ActionButton>
 				</section>
 			</div>
 		</Page>

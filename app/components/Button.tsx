@@ -38,8 +38,16 @@ export const Button = ({
 	className = '',
 	...props
 }: ButtonProps) => {
-	const baseStyle =
-		'px-6 py-3 rounded-full font-semibold transition duration-300 ease-in-out transform hover:scale-105 shadow-md cursor-pointer';
+	let baseStyle =
+		'px-6 py-3 rounded-full font-semibold transition duration-300 ease-in-out transform shadow-md';
+
+	// if (disabled) {
+	// 	const disabledStyle = ' opacity-50 cursor-not-allowed hover:transform-none';
+	// 	baseStyle += disabledStyle;
+	// } else {
+	// 	baseStyle += ' cursor-pointer hover:scale-105';
+	// }
+
 	const variants: Record<ButtonVariant, string> = {
 		[ButtonVariant.primary]: 'bg-indigo-600 text-white hover:bg-indigo-700',
 		[ButtonVariant.secondary]: 'bg-gray-200 text-gray-800 hover:bg-gray-300',
@@ -47,6 +55,7 @@ export const Button = ({
 		[ButtonVariant.outline]: 'border border-indigo-600 text-indigo-600 hover:bg-indigo-50',
 	};
 	const variantEnum = getVariantFromText(variant);
+	console.log(disabled);
 	return (
 		<button
 			onClick={onClick}

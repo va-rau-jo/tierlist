@@ -74,6 +74,23 @@ export const updateUserName = async (
 	}
 };
 
+export const doesUsernameExist = async (
+	username: string,
+	db: ReturnType<typeof getFirestore>
+): Promise<boolean> => {
+	/**
+	 * Checks if a username already exists in Firebase
+	 * @param username - The username to check
+	 * @param db - The Firebase database instance
+	 * @returns Promise that resolves to true if username exists, false otherwise
+	 */
+	const usersRef = collection(db, USER_COLLECTION_NAME);
+	const q = query(usersRef, where('publicProfile.details.name', '==', username));
+
+	const querySnapshot = await getDocs(q);
+	return !querySnapshot.empty;
+};
+
 export const addTierList = async (
 	newTierList: TierList,
 	user: User,
