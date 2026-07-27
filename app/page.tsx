@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from './components/Button';
 import { useFirebase } from './components/providers/FirebaseProvider';
+import { BASE_PATH } from './constants';
 
 const SignInPage: React.FC = () => {
 	const router = useRouter();
@@ -56,7 +57,7 @@ const SignInPage: React.FC = () => {
 					<div className='rotate-1 rounded-2xl border border-white/10 bg-white/5 p-2 shadow-2xl ring-1 ring-black/5 backdrop-blur transition-transform duration-300 hover:rotate-0'>
 						<div className='overflow-hidden rounded-xl border border-slate-700/50'>
 							<Image
-								src='/preview.png'
+								src={`${BASE_PATH}/preview.png`}
 								alt='A tier list ranking fast food restaurants from S to F tier'
 								width={652}
 								height={810}

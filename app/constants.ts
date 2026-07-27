@@ -1,3 +1,7 @@
+// Prefix for public/ asset URLs so they resolve correctly under GitHub
+// Pages' basePath (see next.config.ts). Empty string locally.
+export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 export const TIER_ROW_HEIGHT = 30;
 export const TIER_ITEM_HEIGHT = 20;
 export const TIER_LABEL_WIDTH_CLASS = 'w-40';

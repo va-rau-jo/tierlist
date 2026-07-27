@@ -12,7 +12,7 @@
 import ColumnHeader from '@/app/components/ColumnHeader';
 import { TierList, TierListUserRankings } from '@/app/model/TierList';
 import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
-import { TIER_ROW_HEIGHT } from '@/app/constants';
+import { BASE_PATH, TIER_ROW_HEIGHT } from '@/app/constants';
 import { ReactNode, useState } from 'react';
 import Image from 'next/image';
 import CloseIcon from '@/app/components/icons/CloseIcon';
@@ -61,7 +61,7 @@ const StatusItemImage: React.FC<{ imageUrl: string }> = ({ imageUrl }) => {
 	if (imageStatus === ImageLoadStatus.LOADING) {
 		return (
 			<Image
-				src='/loading_black.gif'
+				src={`${BASE_PATH}/loading_black.gif`}
 				height='100'
 				width='100'
 				alt='Loading...'

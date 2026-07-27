@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
 	output: 'export',
 	basePath: BASE_PATH,
 	assetPrefix: BASE_PATH,
+	env: {
+		// next/image doesn't prepend basePath to plain string `src` values
+		// (only to statically-imported images), so components reference public/
+		// assets need this to build the correct URL themselves.
+		NEXT_PUBLIC_BASE_PATH: BASE_PATH,
+	},
 	images: {
 		// No image-optimization server exists on static hosts like GitHub Pages.
 		unoptimized: true,

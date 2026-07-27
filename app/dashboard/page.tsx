@@ -88,7 +88,7 @@ const DashboardPage: React.FC = () => {
 			<Page className='flex flex-col'>
 				<NavBar />
 				<div className='flex flex-1 items-center justify-center'>
-					<p className='text-sm text-slate-500'>Loading board...</p>
+					<p className='text-sm text-slate-500'>Loading...</p>
 				</div>
 			</Page>
 		);

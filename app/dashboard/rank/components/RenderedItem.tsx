@@ -13,7 +13,7 @@ import Image from 'next/image';
 import ErrorIcon from '@/app/components/icons/ErrorIcon';
 import { ImageLoadStatus, useImageStatus } from '@/app/components/providers/ImageLoaderProvider';
 import { truncateText } from '@/app/utils';
-import { DEFAULT_ITEM_SIZE } from '@/app/constants';
+import { BASE_PATH, DEFAULT_ITEM_SIZE } from '@/app/constants';
 
 const baseClasses = 'aspect-square flex items-center justify-center font-medium select-none';
 const LONG_PRESS_MS = 450;
@@ -104,7 +104,7 @@ const UndraggableItem: React.FC<UndraggableItemProps> = ({
 	if (item.imageUrl && imageStatus === ImageLoadStatus.LOADING) {
 		imageDiv = (
 			<Image
-				src='/loading_black.gif'
+				src={`${BASE_PATH}/loading_black.gif`}
 				height='50'
 				width='50'
 				alt='Loading...'
