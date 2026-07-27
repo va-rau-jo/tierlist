@@ -93,7 +93,7 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 	return (
 		<article className='group relative flex min-w-0 flex-col gap-3 rounded-lg border border-slate-200/90 bg-[var(--board-card)] p-3 shadow-sm transition-shadow hover:shadow-md'>
 			<Link
-				href={`/dashboard/rank/${tierList.id}`}
+				href={`/dashboard/rank?id=${tierList.id}`}
 				className='absolute inset-0 z-0 rounded-lg'
 				aria-label={`Open ${tierList.name}`}
 			/>
@@ -142,7 +142,7 @@ const TierListItemCard: React.FC<TierListItemCardProps> = ({ tierList, refreshCa
 
 			<div className='relative z-10 flex min-w-0 flex-wrap gap-1.5'>
 				{canEdit && (
-					<Link href={`/dashboard/edit/${tierList.id}`} className='pointer-events-auto'>
+					<Link href={`/dashboard/edit?id=${tierList.id}`} className='pointer-events-auto'>
 						<ActionButton variant='outline' className='!px-2.5 !py-0.5 !text-xs !shadow-none'>
 							Edit
 						</ActionButton>

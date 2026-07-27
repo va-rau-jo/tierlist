@@ -23,7 +23,7 @@ export const RankingPageHeader = ({ tierList }: { tierList: TierList }) => {
 				</div>
 
 				{tierList.creatorId === user.uid || tierList.editorIds.has(user.uid) ? (
-					<Link href={`/dashboard/edit/${tierList.id}`}>
+					<Link href={`/dashboard/edit?id=${tierList.id}`}>
 						<ActionButton variant='outline'>Edit Tierlist</ActionButton>
 					</Link>
 				) : null}

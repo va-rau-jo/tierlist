@@ -430,7 +430,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 				<h2 className='text-3xl font-bold text-center'>{title}</h2>
 				{mode === TierListEditorMode.Edit && listId ? (
 					<div className='absolute right-0'>
-						<Link href={`/dashboard/rank/${listId}`}>
+						<Link href={`/dashboard/rank?id=${listId}`}>
 							<ActionButton variant='outline'>Go to Ranking</ActionButton>
 						</Link>
 					</div>
