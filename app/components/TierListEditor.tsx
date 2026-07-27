@@ -13,9 +13,10 @@ import { TierList, TierListRankings } from '../model/TierList';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Tier } from '../model/Tier';
 import { generateUniqueId } from '../utils';
-import { MAX_ITEM_SIZE, TIER_ITEM_HEIGHT } from '../constants';
+import { MAX_ITEM_SIZE, TIER_LABEL_WIDTH_CLASS } from '../constants';
 import { usePopup } from './providers/PopupProvider';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import RenderedItem from '../dashboard/rank/components/RenderedItem';
 import { useUserNames } from './providers/UserNamesProvider';
 
@@ -35,8 +36,8 @@ const createNewTierListItem = () => {
 	return new TierListItemModel(generateUniqueId(), '', '');
 };
 
-const createNewTier = (name: string, color: string) => {
-	return new Tier(generateUniqueId(), name, color);
+const createNewTier = (name: string, color: string, textColor: string = '#000000') => {
+	return new Tier(generateUniqueId(), name, color, textColor);
 };
 
 const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => {
@@ -165,17 +166,46 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 
 	// Add a new tier
 	const handleAddTier = () => {
-		setTiers([...tiers, { id: generateUniqueId(), name: '', color: '#CCCCCC' }]);
+		setTiers([...tiers, new Tier(generateUniqueId(), '', '#CCCCCC', '#000000')]);
 	};
 
 	// Update tier properties
-	const handleTierChange = (id: string, field: string, value: string) => {
-		setTiers(tiers.map((tier) => (tier.id === id ? { ...tier, [field]: value } : tier)));
+	const handleTierChange = (id: string, field: 'name' | 'color' | 'textColor', value: string) => {
+		setTiers((prev) =>
+			prev.map((tier) => {
+				if (tier.id !== id) {
+					return tier instanceof Tier ? tier : Tier.fromData(tier);
+				}
+				return new Tier(
+					tier.id,
+					field === 'name' ? value : tier.name,
+					field === 'color' ? value : tier.color,
+					field === 'textColor' ? value : tier.textColor || '#000000'
+				);
+			})
+		);
 	};
 
 	// Remove a tier
 	const handleRemoveTier = (id: string) => {
 		setTiers(tiers.filter((tier) => tier.id !== id));
+	};
+
+	const handleMoveTier = (id: string, direction: 'up' | 'down') => {
+		setTiers((prev) => {
+			const index = prev.findIndex((tier) => tier.id === id);
+			if (index === -1) {
+				return prev;
+			}
+			const targetIndex = direction === 'up' ? index - 1 : index + 1;
+			if (targetIndex < 0 || targetIndex >= prev.length) {
+				return prev;
+			}
+			const nextTiers = [...prev];
+			const [moved] = nextTiers.splice(index, 1);
+			nextTiers.splice(targetIndex, 0, moved);
+			return nextTiers;
+		});
 	};
 
 	// Save the tier list to Firestore
@@ -207,7 +237,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			serverTimestamp() as Timestamp,
 			listName,
 			listDescription,
-			tiers,
+			tiers.map((tier) => Tier.fromData(tier)),
 			items,
 			new Map<string, TierListRankings>()
 		);
@@ -396,7 +426,16 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 
 	return (
 		<div>
-			<h2 className='text-3xl font-bold mb-6 text-center'>{title}</h2>
+			<div className='relative mb-6 flex items-center justify-center'>
+				<h2 className='text-3xl font-bold text-center'>{title}</h2>
+				{mode === TierListEditorMode.Edit && listId ? (
+					<div className='absolute right-0'>
+						<Link href={`/dashboard/rank/${listId}`}>
+							<ActionButton variant='outline'>Go to Ranking</ActionButton>
+						</Link>
+					</div>
+				) : null}
+			</div>
 			{listId && (
 				<Input
 					label='Tier List Id'
@@ -476,34 +515,68 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 
 			<div className='space-y-1 bg-black p-1'>
 				{/* Tiers */}
-				{tiers.map((tier) => (
-					<div className={`'h-${TIER_ITEM_HEIGHT} flex`} key={tier.id}>
-						<div className='flex grow-1 sm:flex-row gap-3 items-center bg-[#404040]'>
+				{tiers.map((tier, index) => (
+					<div className='flex min-h-20' key={tier.id}>
+						<div className='flex flex-1 items-stretch bg-[#404040]'>
 							<div
-								className={`h-${TIER_ITEM_HEIGHT} aspect-square flex items-center justify-center`}
+								className={`flex min-h-20 ${TIER_LABEL_WIDTH_CLASS} shrink-0 items-center justify-center p-2`}
 								style={{ backgroundColor: tier.color }}
 							>
-								<input
-									type='text'
+								<textarea
 									id={`tier-name-${tier.id}`}
 									value={tier.name}
-									onChange={(e: { target: { value: string } }) =>
-										handleTierChange(tier.id, 'name', e.target.value)
-									}
+									onChange={(e) => handleTierChange(tier.id, 'name', e.target.value)}
 									placeholder='Tier Name'
-									className='h-12 w-3/4 text-center'
+									rows={2}
+									className='w-full resize-y bg-transparent text-center text-base font-bold leading-tight outline-none'
+									style={{ color: tier.textColor || '#000000' }}
 								/>
 							</div>
 						</div>
 						{/* Settings div */}
-						<div className='h-full bg-black flex flex-col justify-center items-center space-y-2'>
-							<input
-								type='color'
-								value={tier.color}
-								onChange={(e) => handleTierChange(tier.id, 'color', e.target.value)}
-								className='w-12 h-12 rounded-md border-0'
-								title='Select Tier Color'
-							/>
+						<div className='flex flex-col items-center justify-center space-y-2 bg-black px-2 py-2'>
+							<label className='flex flex-col items-center gap-0.5' title='Background color'>
+								<span className='text-[10px] uppercase tracking-wide text-gray-400'>BG</span>
+								<input
+									type='color'
+									value={tier.color}
+									onChange={(e) => handleTierChange(tier.id, 'color', e.target.value)}
+									className='h-8 w-10 cursor-pointer rounded-md border-0'
+								/>
+							</label>
+							<label className='flex flex-col items-center gap-0.5' title='Text color'>
+								<span className='text-[10px] uppercase tracking-wide text-gray-400'>
+									Text
+								</span>
+								<input
+									type='color'
+									value={tier.textColor || '#000000'}
+									onChange={(e) => handleTierChange(tier.id, 'textColor', e.target.value)}
+									className='h-8 w-10 cursor-pointer rounded-md border-0'
+								/>
+							</label>
+							<div className='flex flex-col items-center gap-1'>
+								<button
+									type='button'
+									className='cursor-pointer text-white hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-30'
+									onClick={() => handleMoveTier(tier.id, 'up')}
+									disabled={index === 0}
+									title='Move tier up'
+									aria-label='Move tier up'
+								>
+									<i className='fas fa-chevron-up'></i>
+								</button>
+								<button
+									type='button'
+									className='cursor-pointer text-white hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-30'
+									onClick={() => handleMoveTier(tier.id, 'down')}
+									disabled={index === tiers.length - 1}
+									title='Move tier down'
+									aria-label='Move tier down'
+								>
+									<i className='fas fa-chevron-down'></i>
+								</button>
+							</div>
 							{tiers.length > 1 && (
 								<i
 									className='fas fa-trash trashcan-icon text-white'

@@ -13,7 +13,7 @@ import {
 import { Tier, UNASSIGNED_TIER } from '@/app/model/Tier';
 import { TierListItem, TierListItemModel } from '@/app/model/TierListItem';
 import NavBar from '@/app/components/NavBar';
-import { DndContext, DragEndEvent, DragOverlay } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { TierRow } from '@/app/dashboard/rank/components/TierRow';
 import { TierList, TierListUserRankings } from '@/app/model/TierList';
 import { useRouter } from 'next/navigation';
@@ -52,6 +52,13 @@ const RankPage: React.FC = () => {
 	const [activeItemId, setActiveItemId] = useState<string | null>();
 	// Tracks the user selected item size.
 	const [itemSize, setItemSize] = useState(DEFAULT_ITEM_SIZE);
+
+	// Require a small movement before drag starts so long-press can show the name.
+	const sensors = useSensors(
+		useSensor(PointerSensor, {
+			activationConstraint: { distance: 8 },
+		})
+	);
 
 	const activeItem = useMemo(() => {
 		if (activeItemId && user) {
@@ -341,6 +348,7 @@ const RankPage: React.FC = () => {
 	return (
 		<Page>
 			<DndContext
+				sensors={sensors}
 				onDragStart={(event) => setActiveItemId(event.active.id as string)}
 				onDragEnd={handleDragEnd}
 				onDragCancel={() => setActiveItemId(null)}

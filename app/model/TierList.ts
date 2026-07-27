@@ -76,11 +76,7 @@ export class TierList {
 			lastUpdatedAt: this.lastUpdatedAt,
 			name: this.name,
 			description: this.description,
-			tiers: this.tiers.map((tier: Tier) => ({
-				id: tier.id,
-				name: tier.name,
-				color: tier.color,
-			})),
+			tiers: this.tiers.map((tier: Tier) => Tier.fromData(tier).toFirebaseObject()),
 			items: this.items.map((item: TierListItemModel) => ({
 				id: item.id,
 				name: item.name,
@@ -100,7 +96,7 @@ export class TierList {
 		if (!obj) {
 			throw new Error('Invalid tier list object');
 		}
-		const tiers = obj.tiers.map((t: any) => new Tier(t.id, t.name, t.color));
+		const tiers = obj.tiers.map((t: any) => Tier.fromData(t));
 		const items = obj.items.map((i: any) => new TierListItemModel(i.id, i.name, i.imageUrl));
 
 		const userRankings = new Map<string, TierListRankings>();

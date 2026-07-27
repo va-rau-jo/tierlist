@@ -17,7 +17,7 @@ import { Tier } from '../../../model/Tier';
 import ColumnHeader from '@/app/components/ColumnHeader';
 import RenderedItem from './RenderedItem';
 import { useDroppable } from '@dnd-kit/core';
-import { TIER_ROW_BG_COLOR_HOVER } from '@/app/constants';
+import { TIER_LABEL_WIDTH_CLASS, TIER_ROW_BG_COLOR_HOVER } from '@/app/constants';
 
 interface TierRowProps {
 	tier: Tier;
@@ -34,19 +34,22 @@ const TierRow: React.FC<TierRowProps> = ({ tier, index, items, itemSize }) => {
 		id: tier.id,
 	});
 
+	const textColor = tier.textColor || '#000000';
+
 	const coloredSquareStyle = {
 		backgroundColor: tier.color,
+		color: textColor,
 	};
 
 	return (
 		<div
 			ref={setNodeRef}
 			id={tier.id}
-			className={`flex grow-1 sm:flex-row items-center border-x-4 border-y-2 border-black`}
+			className={`flex grow-1 sm:flex-row items-stretch border-x-4 border-y-2 border-black`}
 		>
 			<div
 				style={coloredSquareStyle}
-				className='min-h-30 h-full min-w-30 w-fit flex items-center justify-center'
+				className={`flex ${TIER_LABEL_WIDTH_CLASS} shrink-0 min-h-30 items-center justify-center px-2 py-2 text-center text-base font-bold leading-tight break-words whitespace-pre-wrap`}
 			>
 				{tier.name}
 			</div>

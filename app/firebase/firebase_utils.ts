@@ -158,11 +158,7 @@ export const updateTierList = async (
 		description: newTierList.description,
 		editorIds: Array.from(newTierList.editorIds),
 		rankerIds: Array.from(newTierList.rankerIds),
-		tiers: newTierList.tiers.map((tier: Tier) => ({
-			id: tier.id,
-			name: tier.name,
-			color: tier.color,
-		})),
+		tiers: newTierList.tiers.map((tier: Tier) => Tier.fromData(tier).toFirebaseObject()),
 		items: newTierList.items.map((item: TierListItemModel) => ({
 			id: item.id,
 			name: item.name,
@@ -188,7 +184,8 @@ export const getTierList = async (tierListId: string, db: ReturnType<typeof getF
 	if (!tierListDoc.exists()) {
 		return FirebaseReturnStatus.TIERLIST_NOT_FOUND_ERROR;
 	}
-	const tierList = TierList.fromFirebase(tierListDoc.data());
+	const data = tierListDoc.data();
+	const tierList = TierList.fromFirebase({ ...data, id: tierListDoc.id });
 	return tierList;
 };
 
@@ -402,5 +399,7 @@ export const getUserTierLists = async (
 
 	const tierListsRef = collection(db, TIERLIST_COLLECTION_NAME);
 	const q = query(tierListsRef, where('__name__', 'in', validTierListIds));
-	return (await getDocs(q)).docs.map((doc) => TierList.fromFirebase(doc.data()));
+	return (await getDocs(q)).docs.map((doc) =>
+		TierList.fromFirebase({ ...doc.data(), id: doc.id })
+	);
 };

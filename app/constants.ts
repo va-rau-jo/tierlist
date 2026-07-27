@@ -1,5 +1,6 @@
 export const TIER_ROW_HEIGHT = 30;
 export const TIER_ITEM_HEIGHT = 20;
+export const TIER_LABEL_WIDTH_CLASS = 'w-40';
 
 export const DEFAULT_ITEM_SIZE = 15;
 export const MIN_ITEM_SIZE = 10;

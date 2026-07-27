@@ -38,7 +38,7 @@ export const Button = ({
 	className = '',
 	...props
 }: ButtonProps) => {
-	let baseStyle =
+	const baseStyle =
 		'inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-colors duration-200 shadow-sm';
 
 	const variants: Record<ButtonVariant, string> = {
