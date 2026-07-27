@@ -132,7 +132,7 @@ const DashboardPage: React.FC = () => {
 			<main className='mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-5 sm:px-6'>
 				<div className='flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between'>
 					<div className='min-w-0'>
-						<h1 className='truncate text-lg font-semibold text-slate-900'>Your boards</h1>
+						<h1 className='truncate text-lg font-semibold text-slate-900'>Your Tierlists</h1>
 						<p className='text-sm text-slate-500'>Create a list or join one with an ID.</p>
 					</div>
 					<div className='flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center'>
@@ -152,11 +152,7 @@ const DashboardPage: React.FC = () => {
 									className='w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm shadow-none focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
 								/>
 							</div>
-							<ActionButton
-								onClick={joinTierListOnClick}
-								variant='secondary'
-								className='shrink-0'
-							>
+							<ActionButton onClick={joinTierListOnClick} variant='secondary' className='shrink-0'>
 								{joinTierListText}
 							</ActionButton>
 						</div>

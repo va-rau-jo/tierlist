@@ -109,6 +109,7 @@ const UndraggableItem: React.FC<UndraggableItemProps> = ({
 				width='50'
 				alt='Loading...'
 				className='object-cover'
+				unoptimized
 			/>
 		);
 	} else if (item.imageUrl && imageStatus === ImageLoadStatus.LOADED) {

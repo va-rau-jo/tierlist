@@ -66,6 +66,7 @@ const StatusItemImage: React.FC<{ imageUrl: string }> = ({ imageUrl }) => {
 				width='100'
 				alt='Loading...'
 				className='object-cover'
+				unoptimized
 			/>
 		);
 	}

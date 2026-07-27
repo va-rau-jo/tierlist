@@ -43,7 +43,7 @@ const SignInPage: React.FC = () => {
 					Tier Lists
 				</h1>
 				<p className='mt-4 max-w-md text-base text-slate-300 sm:text-lg'>
-					Build boards, invite collaborators, and rank anything together.
+					Build tierlists, invite collaborators, and rank anything together.
 				</p>
 				<div className='mt-10'>
 					<Button variant='primary' onClick={signIn} className='!rounded-lg !px-8 !shadow-lg'>
