@@ -208,15 +208,16 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		});
 	};
 
-	// Save the tier list to Firestore
-	const saveTierListOnClick = async () => {
+	// Save the tier list to Firestore. Returns the tier list's id on success,
+	// or null if validation or the Firestore write failed.
+	const saveTierList = async (): Promise<string | null> => {
 		if (!listName.trim()) {
 			showPopup('Please give the tier list a name.', 'error');
-			return;
+			return null;
 		}
 		if (tiers.some((tier) => !tier.name.trim())) {
 			showPopup('Please give all tiers a name.', 'error');
-			return;
+			return null;
 		}
 
 		setIsSaving(true);
@@ -228,7 +229,7 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		setEditorIds(newEditorIds);
 		setRankerIds(newRankerIds);
 
-		let newTierList = new TierList(
+		const newTierList = new TierList(
 			user.uid,
 			isPrivate,
 			new Set(newEditorIds),
@@ -243,30 +244,42 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 		);
 		if (listId) {
 			// We already created a tier list, update the updateable fields.
-			updateTierList(listId, newTierList, db).then((status) => {
-				if (status !== FirebaseReturnStatus.OK) {
-					showPopup(`Error occurred updating the tierlist: ${status}`, 'error');
-				} else {
-					showPopup('Tier list updated successfully!', 'success');
-					setIsSaving(false);
-					// If no longer an editor, leave the page.
-					if (user.uid !== creatorId && !editorIds.includes(user.uid)) {
-						router.push('/dashboard');
-					}
-				}
-			});
+			const status = await updateTierList(listId, newTierList, db);
+			if (status !== FirebaseReturnStatus.OK) {
+				showPopup(`Error occurred updating the tierlist: ${status}`, 'error');
+				setIsSaving(false);
+				return null;
+			}
+			showPopup('Tier list updated successfully!', 'success');
+			setIsSaving(false);
+			// If no longer an editor, leave the page.
+			if (user.uid !== creatorId && !editorIds.includes(user.uid)) {
+				router.push('/dashboard');
+				return null;
+			}
+			return listId;
 		} else {
 			// Create a new tier list, update Firebase set fields like tierlist id.
-			addTierList(newTierList, user, db).then((returnedTierList) => {
-				if (returnedTierList === FirebaseReturnStatus.TIERLIST_NOT_CREATED_ERROR) {
-					showPopup('Tier list could not be created.', 'error');
-				} else if (returnedTierList instanceof TierList) {
-					newTierList = returnedTierList;
-					showPopup('Tier list created successfully!', 'success');
-					setListId(newTierList.id);
-				}
-				setIsSaving(false);
-			});
+			const returnedTierList = await addTierList(newTierList, user, db);
+			setIsSaving(false);
+			if (!(returnedTierList instanceof TierList)) {
+				showPopup('Tier list could not be created.', 'error');
+				return null;
+			}
+			showPopup('Tier list created successfully!', 'success');
+			setListId(returnedTierList.id);
+			return returnedTierList.id;
+		}
+	};
+
+	const saveTierListOnClick = () => {
+		saveTierList();
+	};
+
+	const saveAndGoToRankingOnClick = async () => {
+		const savedListId = await saveTierList();
+		if (savedListId) {
+			router.push(`/dashboard/rank?id=${savedListId}`);
 		}
 	};
 
@@ -590,7 +603,12 @@ const TierListEditor: React.FC<TierListEditorProps> = ({ mode, tierListId }) => 
 			<Button variant='secondary' onClick={handleAddTier} className='mt-6 w-full'>
 				Add Tier
 			</Button>
-			<div className='fixed flex justify-center bottom-4 right-8'>
+			<div className='fixed flex justify-center gap-3 bottom-4 right-8'>
+				{mode === TierListEditorMode.Create && (
+					<Button variant='secondary' onClick={saveAndGoToRankingOnClick} disabled={isSaving}>
+						{isSaving ? 'Saving...' : 'Save & Go to Ranking'}
+					</Button>
+				)}
 				<Button onClick={saveTierListOnClick} disabled={isSaving}>
 					{isSaving ? 'Saving...' : 'Save Tier List'}
 				</Button>
