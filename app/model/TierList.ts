@@ -121,6 +121,13 @@ export class TierList {
 					UNASSIGNED_TIER,
 					items.filter((item: TierListItemModel) => !rankedItemIds.has(item.id))
 				);
+				// Ensure every current tier has an entry, in case tiers were added
+				// after this user's rankings were last saved.
+				tiers.forEach((tier: Tier) => {
+					if (!rankings.has(tier.id)) {
+						rankings.set(tier.id, []);
+					}
+				});
 
 				userRankings.set(userId, rankings);
 			});
